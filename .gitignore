@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Data and models (tracked by DVC, never by git)
+/data/
+ml/data/raw/
+ml/data/processed/
+*.pcap
+*.binetflow
+*.parquet
+mlruns/
+mlartifacts/
+
+# Node
+node_modules/
+.next/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

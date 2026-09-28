@@ -1,0 +1,36 @@
+# Pipeline parameters (read by the DVC stages in dvc.yaml). Paths are relative to the repo root.
+
+data:
+  raw_dir: ml/data/raw
+  processed_dir: ml/data/processed
+  reports_dir: ml/reports
+  models_dir: ml/models
+
+ctu13:
+  url: https://mcfp.felk.cvut.cz/publicDatasets/CTU-13-Dataset/CTU-13-Dataset.tar.bz2
+  labels: ml/labels/ctu13.yaml
+  # CTU university network; hosts inside are "internal" for the is_internal feature.
+  internal_nets: ["147.32.0.0/16"]
+
+iot23:
+  # "Lighter" release: Zeek conn.log.labeled files only, no pcaps.
+  url: https://mcfp.felk.cvut.cz/publicDatasets/IoT-23-Dataset/iotc/iot_23_datasets_small.tar.gz
+  internal_nets: ["192.168.0.0/16", "10.0.0.0/8", "172.16.0.0/12"]
+
+window:
+  size_s: 300
+  hop_s: 60
+  min_flows: 10
+
+graph:
+  min_flows_for_periodicity: 3
+
+baseline:
+  split: holdout_families
+  n_estimators: 600
+  max_depth: 6
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+  early_stopping_rounds: 40
+  seed: 42

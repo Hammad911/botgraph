@@ -1,0 +1,17 @@
+[project]
+name = "botgraph-core"
+version = "0.1.0"
+description = "Shared flow schema, dataset adapters, windowing and graph feature extraction for BotGraph"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "pydantic>=2.7",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/botgraph_core"]

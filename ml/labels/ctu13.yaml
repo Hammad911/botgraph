@@ -1,0 +1,42 @@
+# Host-level ground truth for CTU-13, taken from the per-scenario READMEs published by
+# the Stratosphere Lab (https://www.stratosphereips.org/datasets-ctu13).
+# Verify each scenario against its README when downloading. Hosts not listed are
+# "unknown": they stay in the graph but are excluded from the loss.
+
+normal_hosts: &normal
+  - 147.32.84.170
+  - 147.32.84.134
+  - 147.32.84.164
+  - 147.32.87.36
+  - 147.32.80.9
+  - 147.32.87.11
+
+scenarios:
+  1:  { family: Neris,   bots: [147.32.84.165], normal: *normal }
+  2:  { family: Neris,   bots: [147.32.84.165], normal: *normal }
+  3:  { family: Rbot,    bots: [147.32.84.165], normal: *normal }
+  4:  { family: Rbot,    bots: [147.32.84.165], normal: *normal }
+  5:  { family: Virut,   bots: [147.32.84.165], normal: *normal }
+  6:  { family: Menti,   bots: [147.32.84.165], normal: *normal }
+  7:  { family: Sogou,   bots: [147.32.84.165], normal: *normal }
+  8:  { family: Murlo,   bots: [147.32.84.165], normal: *normal }
+  9:
+    family: Neris
+    bots: [147.32.84.165, 147.32.84.191, 147.32.84.192, 147.32.84.193, 147.32.84.204,
+           147.32.84.205, 147.32.84.206, 147.32.84.207, 147.32.84.208, 147.32.84.209]
+    normal: *normal
+  10:
+    family: Rbot
+    bots: [147.32.84.165, 147.32.84.191, 147.32.84.192, 147.32.84.193, 147.32.84.204,
+           147.32.84.205, 147.32.84.206, 147.32.84.207, 147.32.84.208, 147.32.84.209]
+    normal: *normal
+  11: { family: Rbot,    bots: [147.32.84.165, 147.32.84.191, 147.32.84.192], normal: *normal }
+  12: { family: NSIS.ay, bots: [147.32.84.165, 147.32.84.191, 147.32.84.192], normal: *normal }
+  13: { family: Virut,   bots: [147.32.84.165], normal: *normal }
+
+# Split by botnet family so evaluation never sees a family it trained on.
+splits:
+  holdout_families:
+    train: [1, 2, 3, 4, 9, 10, 11]   # Neris, Rbot
+    val: [5, 13]                     # Virut
+    test: [6, 7, 8, 12]              # Menti, Sogou, Murlo, NSIS.ay

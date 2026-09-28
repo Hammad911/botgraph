@@ -1,0 +1,52 @@
+[project]
+name = "botgraph"
+version = "0.1.0"
+description = "Botnet detection with graph neural networks over network flow graphs"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["botgraph-core", "botgraph-ml"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*", "ml"]
+
+[tool.uv.sources]
+botgraph-core = { workspace = true }
+botgraph-ml = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pandas-stubs>=2.2",
+    "types-PyYAML>=6.0",
+    "types-requests>=2.32",
+    "pre-commit>=3.7",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "N", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests embed verbatim dataset rows, which are longer than the line limit.
+"**/tests/**" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["botgraph_core", "botgraph_ml"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["packages", "ml"]
+addopts = "-q --strict-markers"

@@ -1,0 +1,62 @@
+# Reproducible data + model pipeline.  Run everything:  dvc repro
+# Stages only rerun when their code, params or inputs change.
+stages:
+  download_ctu13:
+    cmd: python -m botgraph_ml.download ctu13
+    params: [ctu13.url]
+    outs:
+      - ml/data/raw/ctu13:
+          persist: true
+
+  prepare_ctu13:
+    cmd: python -m botgraph_ml.prepare ctu13
+    deps:
+      - ml/data/raw/ctu13
+      - ml/src/botgraph_ml/prepare.py
+      - packages/botgraph-core/src/botgraph_core/adapters.py
+      - packages/botgraph-core/src/botgraph_core/schema.py
+    outs:
+      - ml/data/processed/ctu13/flows
+
+  build_graphs_ctu13:
+    cmd: python -m botgraph_ml.build_graphs ctu13
+    deps:
+      - ml/data/processed/ctu13/flows
+      - ml/labels/ctu13.yaml
+      - ml/src/botgraph_ml/build_graphs.py
+      - packages/botgraph-core/src/botgraph_core/graph.py
+      - packages/botgraph-core/src/botgraph_core/windowing.py
+    params: [window, graph, ctu13.internal_nets]
+    outs:
+      - ml/data/processed/ctu13/graphs
+      - ml/data/processed/ctu13/nodes
+
+  baseline:
+    cmd: python -m botgraph_ml.baseline
+    deps:
+      - ml/data/processed/ctu13/nodes
+      - ml/labels/ctu13.yaml
+      - ml/src/botgraph_ml/baseline.py
+      - ml/src/botgraph_ml/metrics.py
+    params: [baseline]
+    outs:
+      - ml/models/baseline
+    metrics:
+      - ml/reports/baseline/metrics.json:
+          cache: false
+
+  download_iot23:
+    cmd: python -m botgraph_ml.download iot23
+    params: [iot23.url]
+    outs:
+      - ml/data/raw/iot23:
+          persist: true
+
+  prepare_iot23:
+    cmd: python -m botgraph_ml.prepare iot23
+    deps:
+      - ml/data/raw/iot23
+      - ml/src/botgraph_ml/prepare.py
+      - packages/botgraph-core/src/botgraph_core/adapters.py
+    outs:
+      - ml/data/processed/iot23/flows
