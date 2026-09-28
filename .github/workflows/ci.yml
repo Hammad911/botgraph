@@ -17,7 +17,7 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-      - run: uv python install 3.12
+      - run: uv python install  # version from .python-version
       - run: uv sync
       - name: Lint
         run: |
