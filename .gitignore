@@ -34,3 +34,6 @@ node_modules/
 .DS_Store
 .idea/
 .vscode/
+
+# Trained model bundles are DVC pipeline outputs
+ml/models/
