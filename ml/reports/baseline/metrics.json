@@ -1,0 +1,156 @@
+{
+  "model": "xgboost_node_features",
+  "split": "holdout_families",
+  "threshold": 0.5167175531387329,
+  "rows": {
+    "train": 32567,
+    "val": 5759,
+    "test": 8980
+  },
+  "best_iteration": 0,
+  "val": {
+    "n": 5759,
+    "n_pos": 1014,
+    "precision": 0.8827160493827161,
+    "recall": 0.9871794871794872,
+    "f1": 0.9320297951582868,
+    "pr_auc": 0.9118311298863986,
+    "roc_auc": 0.9788055733950197,
+    "fpr_at_95_recall": 0.028029504741833508
+  },
+  "test": {
+    "window": {
+      "n": 8980,
+      "n_pos": 1482,
+      "precision": 0.7860869565217391,
+      "recall": 0.3049932523616734,
+      "f1": 0.4394749635391347,
+      "pr_auc": 0.47312125013568734,
+      "roc_auc": 0.7462209445685741,
+      "fpr_at_95_recall": 0.6868498266204321
+    },
+    "per_scenario": {
+      "6": {
+        "family": "Menti",
+        "window": {
+          "n": 867,
+          "n_pos": 132,
+          "precision": 0.9290780141843972,
+          "recall": 0.9924242424242424,
+          "f1": 0.9597069597069597,
+          "pr_auc": 0.9914544597154117,
+          "roc_auc": 0.9974489795918368,
+          "fpr_at_95_recall": 0.004081632653061225
+        },
+        "host": {
+          "n": 7,
+          "n_pos": 1,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0,
+          "fpr_at_95_recall": 0.0
+        },
+        "bots_detected": 1,
+        "bots_total": 1,
+        "median_time_to_detect_s": 0.0
+      },
+      "7": {
+        "family": "Sogou",
+        "window": {
+          "n": 167,
+          "n_pos": 14,
+          "precision": 1.0,
+          "recall": 0.21428571428571427,
+          "f1": 0.35294117647058826,
+          "pr_auc": 0.43114821686250254,
+          "roc_auc": 0.8055555555555556,
+          "fpr_at_95_recall": 0.5555555555555556
+        },
+        "host": {
+          "n": 7,
+          "n_pos": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0,
+          "fpr_at_95_recall": 0.0
+        },
+        "bots_detected": 1,
+        "bots_total": 1,
+        "median_time_to_detect_s": 120.0
+      },
+      "8": {
+        "family": "Murlo",
+        "window": {
+          "n": 7287,
+          "n_pos": 1134,
+          "precision": 0.7481296758104738,
+          "recall": 0.26455026455026454,
+          "f1": 0.39087947882736157,
+          "pr_auc": 0.4590316308540878,
+          "roc_auc": 0.782923172218367,
+          "fpr_at_95_recall": 0.4513245571266049
+        },
+        "host": {
+          "n": 7,
+          "n_pos": 1,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "pr_auc": 0.5,
+          "roc_auc": 0.8333333333333334,
+          "fpr_at_95_recall": 0.16666666666666666
+        },
+        "bots_detected": 1,
+        "bots_total": 1,
+        "median_time_to_detect_s": 0.0
+      },
+      "12": {
+        "family": "NSIS.ay",
+        "window": {
+          "n": 659,
+          "n_pos": 202,
+          "precision": 0.6,
+          "recall": 0.0891089108910891,
+          "f1": 0.15517241379310345,
+          "pr_auc": 0.34592092197594904,
+          "roc_auc": 0.332966830599909,
+          "fpr_at_95_recall": 1.0
+        },
+        "host": {
+          "n": 9,
+          "n_pos": 3,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "pr_auc": 0.5888888888888888,
+          "roc_auc": 0.7777777777777779,
+          "fpr_at_95_recall": 0.3333333333333333
+        },
+        "bots_detected": 3,
+        "bots_total": 3,
+        "median_time_to_detect_s": 0.0
+      }
+    }
+  },
+  "feature_importance": {
+    "failed_ratio": 0.5102420449256897,
+    "log_in_flows": 0.08623622357845306,
+    "log_bytes_sent": 0.08403628319501877,
+    "log_in_degree": 0.07652847468852997,
+    "log_out_degree": 0.0705171450972557,
+    "sent_ratio": 0.03271183371543884,
+    "log_out_flows": 0.03224717453122139,
+    "frac_irc": 0.031051892787218094,
+    "frac_dns": 0.02419525571167469,
+    "log_bytes_recv": 0.023959850892424583,
+    "frac_smtp": 0.009859300218522549,
+    "log_unique_dst_ports": 0.007609716150909662,
+    "periodicity": 0.005506536923348904,
+    "dst_entropy": 0.005298351403325796,
+    "is_internal": 0.0
+  }
+}

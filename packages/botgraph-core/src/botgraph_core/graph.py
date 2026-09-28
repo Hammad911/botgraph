@@ -86,7 +86,10 @@ def _parsed_nets(nets: tuple[str, ...]) -> tuple[object, ...]:
     return tuple(ip_network(n) for n in nets)
 
 
+@lru_cache(maxsize=2_000_000)
 def is_internal(ip: str, nets: tuple[str, ...]) -> bool:
+    # Cached: consecutive windows overlap heavily, so the same IPs recur constantly and
+    # parsing them was ~60% of graph construction time on CTU-13.
     addr = ip_address(ip)
     return any(addr in net for net in _parsed_nets(nets))  # type: ignore[operator]
 
@@ -209,7 +212,10 @@ def build_window_graph(
     with np.errstate(divide="ignore", invalid="ignore"):
         dst_entropy = np.where(out_degree > 1, raw_entropy / np.log(out_degree), 0.0)
 
-    internal = np.array([is_internal(ip, config.internal_nets) for ip in nodes], dtype=np.float64)
+    node_ips: list[str] = nodes.astype(object).tolist()  # iterate plain str, not Arrow scalars
+    internal = np.fromiter(
+        (is_internal(ip, config.internal_nets) for ip in node_ips), dtype=np.float64, count=n
+    )
 
     x = np.column_stack(
         [
@@ -231,14 +237,12 @@ def build_window_graph(
         ]
     ).astype(np.float32)
 
-    labels = host_labels or {}
-    y = np.array(
-        [LABEL_TO_INT[Label(labels.get(ip, Label.UNKNOWN))] for ip in nodes], dtype=np.int8
-    )
+    label_ints = {ip: LABEL_TO_INT[Label(lbl)] for ip, lbl in (host_labels or {}).items()}
+    y = np.fromiter((label_ints.get(ip, -1) for ip in node_ips), dtype=np.int8, count=n)
 
     return WindowGraph(
         window_id=window_id,
-        nodes=[str(ip) for ip in nodes],
+        nodes=node_ips,
         x=x,
         edge_index=edge_index,
         edge_attr=edge_attr,
