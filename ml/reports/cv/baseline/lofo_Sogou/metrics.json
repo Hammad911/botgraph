@@ -1,0 +1,80 @@
+{
+  "model": "xgboost_node_features",
+  "split": "lofo:Sogou",
+  "threshold": 0.4795568585395813,
+  "rows": {
+    "train": 41380,
+    "val": 5759,
+    "test": 167
+  },
+  "best_iteration": 0,
+  "val": {
+    "n": 5759,
+    "n_pos": 1014,
+    "precision": 0.7003460207612456,
+    "recall": 0.9980276134122288,
+    "f1": 0.8230988206588044,
+    "pr_auc": 0.8416717226299373,
+    "roc_auc": 0.9550685555022104,
+    "fpr_at_95_recall": 0.09125395152792413
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 167,
+      "n_pos": 14,
+      "precision": 0.5263157894736842,
+      "recall": 0.7142857142857143,
+      "f1": 0.6060606060606061,
+      "pr_auc": 0.7359710550887021,
+      "roc_auc": 0.9505135387488329,
+      "fpr_at_95_recall": 0.46405228758169936
+    },
+    "per_scenario": {
+      "7": {
+        "family": "Sogou",
+        "window": {
+          "n": 167,
+          "n_pos": 14,
+          "precision": 0.5263157894736842,
+          "recall": 0.7142857142857143,
+          "f1": 0.6060606060606061,
+          "pr_auc": 0.7359710550887021,
+          "roc_auc": 0.9505135387488329,
+          "fpr_at_95_recall": 0.46405228758169936
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 2,
+          "benign_total": 6,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.7142857142857143,
+          "benign_windows_flagged": 0.05974358974358975,
+          "median_time_to_alert_s": 420.0
+        }
+      }
+    }
+  },
+  "feature_importance": {
+    "failed_ratio": 0.4291522800922394,
+    "log_in_flows": 0.10750328004360199,
+    "sent_ratio": 0.06915789842605591,
+    "log_bytes_sent": 0.06336411088705063,
+    "log_in_degree": 0.060851216316223145,
+    "frac_irc": 0.06077504903078079,
+    "log_bytes_recv": 0.05406716838479042,
+    "log_out_degree": 0.04208887740969658,
+    "log_out_flows": 0.03324316814541817,
+    "frac_smtp": 0.02375996857881546,
+    "frac_dns": 0.022611485794186592,
+    "periodicity": 0.016992900520563126,
+    "dst_entropy": 0.011757199652493,
+    "log_unique_dst_ports": 0.004675491712987423,
+    "is_internal": 0.0
+  }
+}

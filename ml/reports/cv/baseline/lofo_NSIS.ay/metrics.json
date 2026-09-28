@@ -1,0 +1,80 @@
+{
+  "model": "xgboost_node_features",
+  "split": "lofo:NSIS.ay",
+  "threshold": 0.6900805830955505,
+  "rows": {
+    "train": 39222,
+    "val": 7425,
+    "test": 659
+  },
+  "best_iteration": 165,
+  "val": {
+    "n": 7425,
+    "n_pos": 2436,
+    "precision": 0.9815358791439363,
+    "recall": 0.9601806239737274,
+    "f1": 0.9707408175970118,
+    "pr_auc": 0.9954606664644624,
+    "roc_auc": 0.9980321650159085,
+    "fpr_at_95_recall": 0.00841852074564041
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 659,
+      "n_pos": 202,
+      "precision": 1.0,
+      "recall": 0.0049504950495049506,
+      "f1": 0.009852216748768473,
+      "pr_auc": 0.4164559583222228,
+      "roc_auc": 0.6436401845873865,
+      "fpr_at_95_recall": 0.8774617067833698
+    },
+    "per_scenario": {
+      "12": {
+        "family": "NSIS.ay",
+        "window": {
+          "n": 659,
+          "n_pos": 202,
+          "precision": 1.0,
+          "recall": 0.0049504950495049506,
+          "f1": 0.009852216748768473,
+          "pr_auc": 0.4164559583222228,
+          "roc_auc": 0.6436401845873865,
+          "fpr_at_95_recall": 0.8774617067833698
+        },
+        "alerts": {
+          "bots_alerted": 0,
+          "bots_total": 3,
+          "benign_alerted": 0,
+          "benign_total": 6,
+          "precision": null,
+          "recall": 0.0,
+          "bot_windows_flagged": 0.00546448087431694,
+          "benign_windows_flagged": 0.0,
+          "median_time_to_alert_s": null
+        }
+      }
+    }
+  },
+  "feature_importance": {
+    "failed_ratio": 0.36832329630851746,
+    "log_in_degree": 0.14311066269874573,
+    "sent_ratio": 0.07385062426328659,
+    "log_bytes_sent": 0.07313556224107742,
+    "log_out_flows": 0.06579338759183884,
+    "frac_dns": 0.055446233600378036,
+    "log_in_flows": 0.053176507353782654,
+    "frac_irc": 0.03632650524377823,
+    "log_bytes_recv": 0.03134773671627045,
+    "log_unique_dst_ports": 0.030098216608166695,
+    "periodicity": 0.022485362365841866,
+    "frac_smtp": 0.01963389478623867,
+    "log_out_degree": 0.015632454305887222,
+    "dst_entropy": 0.011639593169093132,
+    "is_internal": 0.0
+  }
+}

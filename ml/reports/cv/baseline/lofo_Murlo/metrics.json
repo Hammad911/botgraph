@@ -1,0 +1,80 @@
+{
+  "model": "xgboost_node_features",
+  "split": "lofo:Murlo",
+  "threshold": 0.2506968379020691,
+  "rows": {
+    "train": 39360,
+    "val": 659,
+    "test": 7287
+  },
+  "best_iteration": 14,
+  "val": {
+    "n": 659,
+    "n_pos": 202,
+    "precision": 0.6165413533834586,
+    "recall": 0.8118811881188119,
+    "f1": 0.7008547008547008,
+    "pr_auc": 0.5882299741164284,
+    "roc_auc": 0.7632320124791472,
+    "fpr_at_95_recall": 1.0
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 7287,
+      "n_pos": 1134,
+      "precision": 0.4055793991416309,
+      "recall": 1.0,
+      "f1": 0.5770992366412214,
+      "pr_auc": 0.6501967822047944,
+      "roc_auc": 0.9061778842915416,
+      "fpr_at_95_recall": 0.1558589306029579
+    },
+    "per_scenario": {
+      "8": {
+        "family": "Murlo",
+        "window": {
+          "n": 7287,
+          "n_pos": 1134,
+          "precision": 0.4055793991416309,
+          "recall": 1.0,
+          "f1": 0.5770992366412214,
+          "pr_auc": 0.6501967822047944,
+          "roc_auc": 0.9061778842915416,
+          "fpr_at_95_recall": 0.1558589306029579
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 6,
+          "benign_total": 6,
+          "precision": 0.14285714285714285,
+          "recall": 1.0,
+          "bot_windows_flagged": 1.0,
+          "benign_windows_flagged": 0.29901570158989405,
+          "median_time_to_alert_s": 120.0
+        }
+      }
+    }
+  },
+  "feature_importance": {
+    "failed_ratio": 0.40133291482925415,
+    "frac_smtp": 0.18878468871116638,
+    "log_bytes_sent": 0.0750747099518776,
+    "log_in_flows": 0.0708039179444313,
+    "log_in_degree": 0.0645354837179184,
+    "log_out_flows": 0.05907540023326874,
+    "frac_irc": 0.03513966500759125,
+    "sent_ratio": 0.02774684876203537,
+    "log_bytes_recv": 0.026798708364367485,
+    "frac_dns": 0.019267698749899864,
+    "log_out_degree": 0.013641901314258575,
+    "dst_entropy": 0.0071578193455934525,
+    "periodicity": 0.006426013540476561,
+    "log_unique_dst_ports": 0.0042142258025705814,
+    "is_internal": 0.0
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "model": "xgboost_node_features",
+  "split": "lofo:Virut",
+  "threshold": 0.9112263917922974,
+  "rows": {
+    "train": 40680,
+    "val": 867,
+    "test": 5759
+  },
+  "best_iteration": 183,
+  "val": {
+    "n": 867,
+    "n_pos": 132,
+    "precision": 1.0,
+    "recall": 0.9924242424242424,
+    "f1": 0.9961977186311787,
+    "pr_auc": 0.9984122663763382,
+    "roc_auc": 0.9996392496392495,
+    "fpr_at_95_recall": 0.0
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 5759,
+      "n_pos": 1014,
+      "precision": 0.7993827160493827,
+      "recall": 0.25542406311637084,
+      "f1": 0.38714499252615847,
+      "pr_auc": 0.7920233160485322,
+      "roc_auc": 0.9637577601669358,
+      "fpr_at_95_recall": 0.057534246575342465
+    },
+    "per_scenario": {
+      "5": {
+        "family": "Virut",
+        "window": {
+          "n": 221,
+          "n_pos": 28,
+          "precision": 1.0,
+          "recall": 0.8571428571428571,
+          "f1": 0.9230769230769231,
+          "pr_auc": 0.994941942294159,
+          "roc_auc": 0.9992598075499629,
+          "fpr_at_95_recall": 0.0051813471502590676
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 0,
+          "benign_total": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.8571428571428571,
+          "benign_windows_flagged": 0.0,
+          "median_time_to_alert_s": 360.0
+        }
+      },
+      "13": {
+        "family": "Virut",
+        "window": {
+          "n": 5538,
+          "n_pos": 986,
+          "precision": 0.7833333333333333,
+          "recall": 0.2383367139959432,
+          "f1": 0.3654743390357698,
+          "pr_auc": 0.7804947963440729,
+          "roc_auc": 0.9615800914026601,
+          "fpr_at_95_recall": 0.05909490333919156
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 1,
+          "benign_total": 6,
+          "precision": 0.5,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.2383367139959432,
+          "benign_windows_flagged": 0.02280701754385965,
+          "median_time_to_alert_s": 540.0
+        }
+      }
+    }
+  },
+  "feature_importance": {
+    "failed_ratio": 0.33541548252105713,
+    "log_in_flows": 0.09437596797943115,
+    "log_in_degree": 0.08906567096710205,
+    "log_out_degree": 0.07901737838983536,
+    "sent_ratio": 0.07585101574659348,
+    "log_bytes_sent": 0.06946073472499847,
+    "frac_irc": 0.06282151490449905,
+    "log_bytes_recv": 0.05278324708342552,
+    "log_out_flows": 0.03955909609794617,
+    "frac_dns": 0.035744983702898026,
+    "periodicity": 0.026315877214074135,
+    "dst_entropy": 0.020510410889983177,
+    "log_unique_dst_ports": 0.012851372361183167,
+    "frac_smtp": 0.006227197591215372,
+    "is_internal": 0.0
+  }
+}

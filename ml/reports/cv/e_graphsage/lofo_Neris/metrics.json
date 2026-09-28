@@ -1,0 +1,148 @@
+{
+  "model": "e_graphsage",
+  "split": "lofo:Neris",
+  "threshold": 0.0064764185808598995,
+  "rows": {
+    "train": 14739,
+    "val": 25142,
+    "test": 7425
+  },
+  "windows": {
+    "train": 2434,
+    "val": 4581,
+    "test": 946
+  },
+  "best_epoch": 2,
+  "train_time_s": 825.2,
+  "latency_ms_per_window": {
+    "mean": 22.867913000018675,
+    "p95": 35.642749750877556
+  },
+  "val": {
+    "n": 25142,
+    "n_pos": 3441,
+    "precision": 0.8824057450628366,
+    "recall": 0.5713455390874745,
+    "f1": 0.6935967542776503,
+    "pr_auc": 0.7377080166253048,
+    "roc_auc": 0.8641636220980714,
+    "fpr_at_95_recall": 0.5858716188194092
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 7425,
+      "n_pos": 2436,
+      "precision": 0.9429864253393665,
+      "recall": 0.8555008210180624,
+      "f1": 0.8971157985363754,
+      "pr_auc": 0.9705448622205581,
+      "roc_auc": 0.9817227621621425,
+      "fpr_at_95_recall": 0.10603327320104229
+    },
+    "per_scenario": {
+      "1": {
+        "family": "Neris",
+        "window": {
+          "n": 2411,
+          "n_pos": 304,
+          "precision": 0.927007299270073,
+          "recall": 0.8355263157894737,
+          "f1": 0.8788927335640139,
+          "pr_auc": 0.9533597036110609,
+          "roc_auc": 0.9884579596832613,
+          "fpr_at_95_recall": 0.07356430944470811
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 1,
+          "benign_total": 6,
+          "precision": 0.5,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.8355263157894737,
+          "benign_windows_flagged": 0.012587134868618002,
+          "median_time_to_alert_s": 120.0
+        }
+      },
+      "2": {
+        "family": "Neris",
+        "window": {
+          "n": 1271,
+          "n_pos": 213,
+          "precision": 0.9422222222222222,
+          "recall": 0.9953051643192489,
+          "f1": 0.9680365296803652,
+          "pr_auc": 0.9980210505480511,
+          "roc_auc": 0.9993743177400889,
+          "fpr_at_95_recall": 0.0
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 1,
+          "benign_total": 6,
+          "precision": 0.5,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.9953051643192489,
+          "benign_windows_flagged": 0.02907479463899697,
+          "median_time_to_alert_s": 120.0
+        }
+      },
+      "9": {
+        "family": "Neris",
+        "window": {
+          "n": 3743,
+          "n_pos": 1919,
+          "precision": 0.945645821157218,
+          "recall": 0.8431474726420011,
+          "f1": 0.8914600550964187,
+          "pr_auc": 0.9800042282842898,
+          "roc_auc": 0.977069962882715,
+          "fpr_at_95_recall": 0.12225877192982457
+        },
+        "alerts": {
+          "bots_alerted": 10,
+          "bots_total": 10,
+          "benign_alerted": 2,
+          "benign_total": 6,
+          "precision": 0.8333333333333334,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.8443595818343814,
+          "benign_windows_flagged": 0.05386503901355386,
+          "median_time_to_alert_s": 510.0
+        }
+      }
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.09672172571468625,
+      "val_pr_auc": 0.559813335389025
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.04346573531203871,
+      "val_pr_auc": 0.7377080166253048
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.024124806575688867,
+      "val_pr_auc": 0.6782323950108442
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.021717335516978662,
+      "val_pr_auc": 0.6650185774780036
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.01864659087406771,
+      "val_pr_auc": 0.6474392617456768
+    }
+  ]
+}

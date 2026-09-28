@@ -1,0 +1,95 @@
+{
+  "model": "e_graphsage",
+  "split": "lofo:Murlo",
+  "threshold": 0.00010922772344201803,
+  "rows": {
+    "train": 39360,
+    "val": 659,
+    "test": 7287
+  },
+  "windows": {
+    "train": 6709,
+    "val": 78,
+    "test": 1174
+  },
+  "best_epoch": 1,
+  "train_time_s": 1283.9,
+  "latency_ms_per_window": {
+    "mean": 6.248683600543054,
+    "p95": 12.056962600581754
+  },
+  "val": {
+    "n": 659,
+    "n_pos": 202,
+    "precision": 0.3562610229276896,
+    "recall": 1.0,
+    "f1": 0.5253576072821846,
+    "pr_auc": 0.6026183850637407,
+    "roc_auc": 0.687956322984596,
+    "fpr_at_95_recall": 0.7702407002188184
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 7287,
+      "n_pos": 1134,
+      "precision": 0.1878727634194831,
+      "recall": 1.0,
+      "f1": 0.3163179916317992,
+      "pr_auc": 0.8293544350265631,
+      "roc_auc": 0.9756838478871092,
+      "fpr_at_95_recall": 0.03884284089062246
+    },
+    "per_scenario": {
+      "8": {
+        "family": "Murlo",
+        "window": {
+          "n": 7287,
+          "n_pos": 1134,
+          "precision": 0.1878727634194831,
+          "recall": 1.0,
+          "f1": 0.3163179916317992,
+          "pr_auc": 0.8293544350265631,
+          "roc_auc": 0.9756838478871092,
+          "fpr_at_95_recall": 0.03884284089062246
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 6,
+          "benign_total": 6,
+          "precision": 0.14285714285714285,
+          "recall": 1.0,
+          "bot_windows_flagged": 1.0,
+          "benign_windows_flagged": 0.8224020442930153,
+          "median_time_to_alert_s": 120.0
+        }
+      }
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.15429409629231214,
+      "val_pr_auc": 0.6026183850637407
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.08790905659738851,
+      "val_pr_auc": 0.42555223948624843
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.07348221769578275,
+      "val_pr_auc": 0.5477963778344112
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.07564667544060973,
+      "val_pr_auc": 0.48075594944788197
+    }
+  ]
+}

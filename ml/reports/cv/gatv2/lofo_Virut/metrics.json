@@ -1,0 +1,134 @@
+{
+  "model": "gatv2",
+  "split": "lofo:Virut",
+  "threshold": 0.9839624762535095,
+  "rows": {
+    "train": 40680,
+    "val": 867,
+    "test": 5759
+  },
+  "windows": {
+    "train": 6805,
+    "val": 134,
+    "test": 1022
+  },
+  "best_epoch": 4,
+  "train_time_s": 1533.2,
+  "latency_ms_per_window": {
+    "mean": 5.803764705473469,
+    "p95": 8.391139898230904
+  },
+  "val": {
+    "n": 867,
+    "n_pos": 132,
+    "precision": 0.9924812030075187,
+    "recall": 1.0,
+    "f1": 0.9962264150943396,
+    "pr_auc": 0.9999430394167236,
+    "roc_auc": 0.9999896928468357,
+    "fpr_at_95_recall": 0.0
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 5759,
+      "n_pos": 1014,
+      "precision": 0.9990089197224975,
+      "recall": 0.9940828402366864,
+      "f1": 0.9965397923875432,
+      "pr_auc": 0.9999240280162092,
+      "roc_auc": 0.9999842042802243,
+      "fpr_at_95_recall": 0.00021074815595363542
+    },
+    "per_scenario": {
+      "5": {
+        "family": "Virut",
+        "window": {
+          "n": 221,
+          "n_pos": 28,
+          "precision": 1.0,
+          "recall": 0.8928571428571429,
+          "f1": 0.9433962264150944,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0,
+          "fpr_at_95_recall": 0.0
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 0,
+          "benign_total": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.8928571428571429,
+          "benign_windows_flagged": 0.0,
+          "median_time_to_alert_s": 300.0
+        }
+      },
+      "13": {
+        "family": "Virut",
+        "window": {
+          "n": 5538,
+          "n_pos": 986,
+          "precision": 0.9989837398373984,
+          "recall": 0.9969574036511156,
+          "f1": 0.9979695431472081,
+          "pr_auc": 0.9999301360929502,
+          "roc_auc": 0.9999852950088587,
+          "fpr_at_95_recall": 0.0002196836555360281
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 0,
+          "benign_total": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.9969574036511156,
+          "benign_windows_flagged": 0.00016903313049357674,
+          "median_time_to_alert_s": 300.0
+        }
+      }
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.16619650966692953,
+      "val_pr_auc": 0.9970681069928229
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.08799712287639173,
+      "val_pr_auc": 0.999827817103375
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.08258167027278367,
+      "val_pr_auc": 0.9996516296361265
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.07124778549961593,
+      "val_pr_auc": 0.9999430394167236
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.06585270930607683,
+      "val_pr_auc": 0.9996620433187597
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.06474117608444022,
+      "val_pr_auc": 0.9995610949257123
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.062068363205913024,
+      "val_pr_auc": 0.9995358675763547
+    }
+  ]
+}

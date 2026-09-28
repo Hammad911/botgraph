@@ -1,0 +1,152 @@
+{
+  "model": "xgboost_node_features",
+  "split": "lofo:Rbot",
+  "threshold": 0.4465869069099426,
+  "rows": {
+    "train": 21997,
+    "val": 167,
+    "test": 25142
+  },
+  "best_iteration": 6,
+  "val": {
+    "n": 167,
+    "n_pos": 14,
+    "precision": 0.9285714285714286,
+    "recall": 0.9285714285714286,
+    "f1": 0.9285714285714286,
+    "pr_auc": 0.882226345083488,
+    "roc_auc": 0.9673202614379085,
+    "fpr_at_95_recall": 0.39869281045751637
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 25142,
+      "n_pos": 3441,
+      "precision": 0.7299270072992701,
+      "recall": 0.5521650682941005,
+      "f1": 0.628722700198544,
+      "pr_auc": 0.7180272643155992,
+      "roc_auc": 0.9145086383871277,
+      "fpr_at_95_recall": 0.46108474263858806
+    },
+    "per_scenario": {
+      "3": {
+        "family": "Rbot",
+        "window": {
+          "n": 20437,
+          "n_pos": 1976,
+          "precision": 0.6589805825242718,
+          "recall": 0.5495951417004049,
+          "f1": 0.5993377483443708,
+          "pr_auc": 0.6628242722368713,
+          "roc_auc": 0.8806378974430613,
+          "fpr_at_95_recall": 0.47229294187747145
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 4,
+          "benign_total": 6,
+          "precision": 0.2,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.5495951417004049,
+          "benign_windows_flagged": 0.15966377850593538,
+          "median_time_to_alert_s": 2520.0
+        }
+      },
+      "4": {
+        "family": "Rbot",
+        "window": {
+          "n": 1692,
+          "n_pos": 198,
+          "precision": 0.8860103626943006,
+          "recall": 0.8636363636363636,
+          "f1": 0.8746803069053708,
+          "pr_auc": 0.9196195196993004,
+          "roc_auc": 0.9881005503495464,
+          "fpr_at_95_recall": 0.0642570281124498
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 2,
+          "benign_total": 6,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.8636363636363636,
+          "benign_windows_flagged": 0.01579463662405816,
+          "median_time_to_alert_s": 540.0
+        }
+      },
+      "10": {
+        "family": "Rbot",
+        "window": {
+          "n": 2850,
+          "n_pos": 1221,
+          "precision": 0.8461538461538461,
+          "recall": 0.4954954954954955,
+          "f1": 0.625,
+          "pr_auc": 0.855910513418707,
+          "roc_auc": 0.9254716796153261,
+          "fpr_at_95_recall": 0.13136893799877225
+        },
+        "alerts": {
+          "bots_alerted": 10,
+          "bots_total": 10,
+          "benign_alerted": 6,
+          "benign_total": 6,
+          "precision": 0.625,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.49965893852668775,
+          "benign_windows_flagged": 0.07074001420499453,
+          "median_time_to_alert_s": 120.0
+        }
+      },
+      "11": {
+        "family": "Rbot",
+        "window": {
+          "n": 163,
+          "n_pos": 46,
+          "precision": 0.8085106382978723,
+          "recall": 0.8260869565217391,
+          "f1": 0.8172043010752689,
+          "pr_auc": 0.9061429355958486,
+          "roc_auc": 0.9693422519509477,
+          "fpr_at_95_recall": 0.08547008547008547
+        },
+        "alerts": {
+          "bots_alerted": 3,
+          "bots_total": 3,
+          "benign_alerted": 1,
+          "benign_total": 6,
+          "precision": 0.75,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.8382352941176471,
+          "benign_windows_flagged": 0.08823529411764706,
+          "median_time_to_alert_s": 120.0
+        }
+      }
+    }
+  },
+  "feature_importance": {
+    "frac_smtp": 0.5805596709251404,
+    "failed_ratio": 0.08265871554613113,
+    "periodicity": 0.07807482779026031,
+    "log_bytes_recv": 0.0509859137237072,
+    "log_bytes_sent": 0.04367339611053467,
+    "dst_entropy": 0.03011593036353588,
+    "log_in_flows": 0.026030363515019417,
+    "log_unique_dst_ports": 0.019894786179065704,
+    "log_out_flows": 0.017715662717819214,
+    "log_out_degree": 0.016223376616835594,
+    "sent_ratio": 0.01613118126988411,
+    "log_in_degree": 0.014498783275485039,
+    "frac_dns": 0.014060324057936668,
+    "frac_irc": 0.009377066045999527,
+    "is_internal": 0.0
+  }
+}

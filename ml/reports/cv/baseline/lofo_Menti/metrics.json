@@ -1,0 +1,80 @@
+{
+  "model": "xgboost_node_features",
+  "split": "lofo:Menti",
+  "threshold": 0.48978132009506226,
+  "rows": {
+    "train": 39152,
+    "val": 7287,
+    "test": 867
+  },
+  "best_iteration": 0,
+  "val": {
+    "n": 7287,
+    "n_pos": 1134,
+    "precision": 0.6544566544566545,
+    "recall": 0.9453262786596119,
+    "f1": 0.7734487734487735,
+    "pr_auc": 0.6614037913570056,
+    "roc_auc": 0.9246081907249901,
+    "fpr_at_95_recall": 0.6174223955793922
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 867,
+      "n_pos": 132,
+      "precision": 0.5764192139737991,
+      "recall": 1.0,
+      "f1": 0.7313019390581718,
+      "pr_auc": 0.9933108532439161,
+      "roc_auc": 0.9988610595753453,
+      "fpr_at_95_recall": 0.009523809523809525
+    },
+    "per_scenario": {
+      "6": {
+        "family": "Menti",
+        "window": {
+          "n": 867,
+          "n_pos": 132,
+          "precision": 0.5764192139737991,
+          "recall": 1.0,
+          "f1": 0.7313019390581718,
+          "pr_auc": 0.9933108532439161,
+          "roc_auc": 0.9988610595753453,
+          "fpr_at_95_recall": 0.009523809523809525
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 5,
+          "benign_total": 6,
+          "precision": 0.16666666666666666,
+          "recall": 1.0,
+          "bot_windows_flagged": 1.0,
+          "benign_windows_flagged": 0.15490643161499407,
+          "median_time_to_alert_s": 120.0
+        }
+      }
+    }
+  },
+  "feature_importance": {
+    "failed_ratio": 0.395793080329895,
+    "frac_smtp": 0.17824967205524445,
+    "log_bytes_sent": 0.08572489023208618,
+    "log_in_flows": 0.06476487964391708,
+    "log_out_flows": 0.056626301258802414,
+    "frac_irc": 0.04577366262674332,
+    "log_in_degree": 0.03572370484471321,
+    "log_bytes_recv": 0.031290166079998016,
+    "sent_ratio": 0.024975145235657692,
+    "frac_dns": 0.024494115263223648,
+    "dst_entropy": 0.023941686376929283,
+    "log_out_degree": 0.022814186289906502,
+    "log_unique_dst_ports": 0.0055051809176802635,
+    "periodicity": 0.004323204513639212,
+    "is_internal": 0.0
+  }
+}

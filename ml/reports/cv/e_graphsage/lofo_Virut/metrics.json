@@ -1,0 +1,124 @@
+{
+  "model": "e_graphsage",
+  "split": "lofo:Virut",
+  "threshold": 0.8990488052368164,
+  "rows": {
+    "train": 40680,
+    "val": 867,
+    "test": 5759
+  },
+  "windows": {
+    "train": 6805,
+    "val": 134,
+    "test": 1022
+  },
+  "best_epoch": 2,
+  "train_time_s": 1136.2,
+  "latency_ms_per_window": {
+    "mean": 4.705069474515831,
+    "p95": 7.555550000142828
+  },
+  "val": {
+    "n": 867,
+    "n_pos": 132,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "pr_auc": 1.0,
+    "roc_auc": 1.0,
+    "fpr_at_95_recall": 0.0
+  },
+  "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
+    "window": {
+      "n": 5759,
+      "n_pos": 1014,
+      "precision": 0.9421641791044776,
+      "recall": 0.9960552268244576,
+      "f1": 0.9683604985618408,
+      "pr_auc": 0.9993629972275673,
+      "roc_auc": 0.9998432898327524,
+      "fpr_at_95_recall": 0.0
+    },
+    "per_scenario": {
+      "5": {
+        "family": "Virut",
+        "window": {
+          "n": 221,
+          "n_pos": 28,
+          "precision": 1.0,
+          "recall": 0.9642857142857143,
+          "f1": 0.9818181818181818,
+          "pr_auc": 0.9987684729064039,
+          "roc_auc": 0.9998149518874907,
+          "fpr_at_95_recall": 0.0
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 0,
+          "benign_total": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.9642857142857143,
+          "benign_windows_flagged": 0.0,
+          "median_time_to_alert_s": 120.0
+        }
+      },
+      "13": {
+        "family": "Virut",
+        "window": {
+          "n": 5538,
+          "n_pos": 986,
+          "precision": 0.9406698564593301,
+          "recall": 0.9969574036511156,
+          "f1": 0.9679960610536681,
+          "pr_auc": 0.999434034597917,
+          "roc_auc": 0.9998576289494041,
+          "fpr_at_95_recall": 0.0
+        },
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 2,
+          "benign_total": 6,
+          "precision": 0.3333333333333333,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.9969574036511156,
+          "benign_windows_flagged": 0.03199730094466937,
+          "median_time_to_alert_s": 120.0
+        }
+      }
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.1573794411630745,
+      "val_pr_auc": 0.9987909486881738
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.08774758005471987,
+      "val_pr_auc": 1.0
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.07751582220858057,
+      "val_pr_auc": 0.99961322713299
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.0643192412316755,
+      "val_pr_auc": 0.9997235124972351
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.06422879566071489,
+      "val_pr_auc": 1.0
+    }
+  ]
+}
