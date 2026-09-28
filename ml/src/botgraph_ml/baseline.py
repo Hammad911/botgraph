@@ -104,10 +104,12 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.parse_args(argv)
+    parser.add_argument("--split", help="overrides baseline.split in params.yaml")
+    args = parser.parse_args(argv)
 
     params = load_params()
-    p = params["baseline"]
+    p = dict(params["baseline"])
+    p["split"] = args.split or p["split"]
     np.random.seed(p["seed"])
     labels = load_labels(repo_path(params["ctu13"]["labels"]))
     nodes_dir = repo_path(params["data"]["processed_dir"]) / "ctu13" / "nodes"

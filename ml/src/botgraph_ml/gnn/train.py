@@ -157,11 +157,13 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--model", choices=MODEL_KINDS, help="overrides gnn.model in params.yaml")
     parser.add_argument("--epochs", type=int, help="override epochs (quick experiments)")
+    parser.add_argument("--split", help="overrides gnn.split in params.yaml")
     args = parser.parse_args(argv)
 
     params = load_params()
     cfg: dict[str, Any] = dict(params["gnn"])
     cfg["model"] = args.model or cfg["model"]
+    cfg["split"] = args.split or cfg["split"]
     if args.epochs:
         cfg["epochs"] = args.epochs
     device = resolve_device(cfg["device"])

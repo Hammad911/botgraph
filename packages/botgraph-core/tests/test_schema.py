@@ -50,3 +50,9 @@ def test_validate_frame_rejects_bad_values() -> None:
         validate_frame(df.assign(proto="sctp"))
     with pytest.raises(ValueError, match="missing"):
         validate_frame(pd.DataFrame({"ts": [1.0]}))
+
+
+def test_validate_frame_rejects_non_ip_addresses() -> None:
+    df = records_to_frame([_record()])
+    with pytest.raises(ValueError, match="non-IP"):
+        validate_frame(df.assign(src_ip="00:15:17:2c:e5:2d"))

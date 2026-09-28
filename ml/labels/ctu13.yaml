@@ -40,3 +40,9 @@ splits:
     train: [1, 2, 3, 4, 9, 10, 11]   # Neris, Rbot
     val: [5, 13]                     # Virut
     test: [6, 7, 8, 12]              # Menti, Sogou, Murlo, NSIS.ay
+  # Same idea using only the 7 scenarios in the first part of the archive
+  # (1, 4, 5, 7, 8, 10, 12); no Menti. Useful while the full extraction runs.
+  holdout_families_7:
+    train: [1, 4, 10]                # Neris, Rbot
+    val: [5]                         # Virut
+    test: [7, 8, 12]                 # Sogou, Murlo, NSIS.ay

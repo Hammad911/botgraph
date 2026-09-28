@@ -13,6 +13,7 @@ StartTime,Dur,Proto,SrcAddr,Sport,Dir,DstAddr,Dport,State,sTos,dTos,TotPkts,TotB
 2011/08/10 09:46:53.047277,3.124,tcp,147.32.84.165,1027,   ->,74.125.232.195,80,SRPA_SPA,0,0,12,1066,588,flow=From-Botnet-V42-TCP-HTTP-Google-Net-Established-6
 2011/08/10 09:46:54.000000,0.000,icmp,147.32.84.165,0x0008,   ->,147.32.96.69,0x0303,ECO,0,,1,70,70,flow=Background
 2011/08/10 09:46:55.500000,1.0,udp,147.32.84.170,53,  <->,147.32.80.9,53,CON,0,0,2,200,80,flow=To-Normal-V42-UDP-CVUT-DNS-Server
+2011/08/10 09:46:56.000000,0.0,arp,00:15:17:2c:e5:2d,,  who,00:21:9b:2e:4f:10,,INT,0,0,1,60,60,flow=Background
 """
 
 ZEEK_SAMPLE = (
@@ -30,6 +31,7 @@ ZEEK_SAMPLE = (
 def test_ctu13_binetflow() -> None:
     df = read_ctu13_binetflow(io.StringIO(CTU13_SAMPLE))
 
+    assert len(df) == 3  # the ARP row (MAC addresses) is dropped
     assert df["label"].tolist() == ["botnet", "unknown", "benign"]
     assert df["proto"].tolist() == ["tcp", "icmp", "udp"]
     assert df.loc[0, "dst_bytes"] == 1066 - 588

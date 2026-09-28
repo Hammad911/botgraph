@@ -102,8 +102,27 @@ def validate_frame(df: pd.DataFrame) -> pd.DataFrame:
         raise ValueError(f"invalid label values: {out.loc[bad_label, 'label'].unique()[:5]}")
     if (out[["duration", "src_bytes", "dst_bytes", "pkts"]] < 0).any().any():
         raise ValueError("negative duration, byte or packet counts")
+    bad_ip = ~(is_ip(out["src_ip"]) & is_ip(out["dst_ip"]))
+    if bad_ip.any():
+        sample = out.loc[bad_ip, ["src_ip", "dst_ip"]].head(3).to_dict("records")
+        raise ValueError(f"non-IP addresses (e.g. ARP MACs) must be filtered first: {sample}")
 
     return out.reset_index(drop=True)
+
+
+def _valid_ip(value: object) -> bool:
+    try:
+        ip_address(str(value))
+    except ValueError:
+        return False
+    return True
+
+
+def is_ip(addresses: pd.Series) -> pd.Series:
+    """Boolean mask of valid IPv4/IPv6 addresses (each distinct value is parsed once)."""
+    unique = pd.unique(addresses.to_numpy())
+    valid = {v: _valid_ip(v) for v in unique}
+    return addresses.map(valid).fillna(False).astype(bool)
 
 
 def records_to_frame(records: list[FlowRecord]) -> pd.DataFrame:

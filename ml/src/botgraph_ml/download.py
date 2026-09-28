@@ -69,9 +69,14 @@ def _copy_member(tar: tarfile.TarFile, member: tarfile.TarInfo, target: Path) ->
 def extract_matching(
     archive: Path, out_dir: Path, target_for: Callable[[PurePosixPath], Path | None]
 ) -> list[Path]:
-    """Stream through ``archive`` and copy each member for which ``target_for`` returns a path."""
+    """Walk ``archive`` once and copy each member for which ``target_for`` returns a path.
+
+    Uses random-access mode ("r:*"), not stream mode ("r|*"): in stream mode tarfile skips
+    unwanted members by slicing an ever-growing decompressed buffer, which is quadratic and
+    stalls for hours on CTU-13's multi-GB, highly compressible pcaps.
+    """
     written: list[Path] = []
-    with tarfile.open(archive, "r|*") as tar:
+    with tarfile.open(archive, "r:*") as tar:
         for member in tar:
             if not member.isfile():
                 continue

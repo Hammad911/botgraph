@@ -15,11 +15,17 @@ from typing import IO
 import numpy as np
 import pandas as pd
 
-from botgraph_core.schema import FLOW_COLUMNS, Label, Proto, validate_frame
+from botgraph_core.schema import FLOW_COLUMNS, Label, Proto, is_ip, validate_frame
 
 DEFAULT_CHUNKSIZE = 500_000
 
 _KNOWN_PROTOS = {p.value for p in Proto}
+
+
+def _ip_flows_only(frame: pd.DataFrame) -> pd.DataFrame:
+    """Drop non-IP flows. Argus (CTU-13) also records ARP and other L2 traffic, whose
+    "addresses" are MACs; they are ~0.001% of rows and never labelled."""
+    return frame[is_ip(frame["src_ip"]) & is_ip(frame["dst_ip"])]
 
 
 def _concat(frames: Iterable[pd.DataFrame]) -> pd.DataFrame:
@@ -100,7 +106,7 @@ def _ctu13_frame(raw: pd.DataFrame, sensor_id: str) -> pd.DataFrame:
             "sensor_id": sensor_id,
         }
     )
-    return validate_frame(frame)
+    return validate_frame(_ip_flows_only(frame))
 
 
 # --------------------------------------------------------------------------- Zeek / IoT-23
@@ -178,4 +184,4 @@ def _zeek_frame(raw: pd.DataFrame, fields: list[str], sensor_id: str) -> pd.Data
             "sensor_id": sensor_id,
         }
     )
-    return validate_frame(frame)
+    return validate_frame(_ip_flows_only(frame))
