@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from typing import Any
 
 import numpy as np
@@ -78,6 +79,24 @@ def evaluate_scores(windows: pd.DataFrame, threshold: float) -> dict[str, Any]:
         "bots_detected": int(bot_ttd.notna().sum()),
         "bots_total": len(bot_ttd),
         "median_time_to_detect_s": float(bot_ttd.median()) if bot_ttd.notna().any() else math.nan,
+    }
+
+
+def holdout_report(
+    scored: pd.DataFrame, threshold: float, families: Mapping[int, str]
+) -> dict[str, Any]:
+    """Overall window metrics plus a per-scenario (per botnet family) breakdown.
+
+    ``scored`` needs columns: scenario, ip, y, score, window_start. Host IPs repeat across
+    CTU-13 scenarios, so hosts are evaluated within each scenario.
+    """
+    per_scenario = {
+        str(sid): {"family": families[int(sid)], **evaluate_scores(part, threshold)}
+        for sid, part in scored.groupby("scenario")
+    }
+    return {
+        "window": evaluate_scores(scored, threshold)["window"],
+        "per_scenario": per_scenario,
     }
 
 

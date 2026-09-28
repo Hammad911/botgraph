@@ -2,6 +2,10 @@
 
 This is the bar the GNNs must beat: anything they add over it comes from the graph.
 
+Do not import this module in a process that also imports torch: on macOS XGBoost's
+OpenMP runtime deadlocks against torch's (see ml/tests/test_baseline.py). The DVC
+stages run as separate processes, so the pipeline itself is unaffected.
+
     python -m botgraph_ml.baseline
 """
 
@@ -18,7 +22,7 @@ from xgboost import XGBClassifier
 
 from botgraph_core import NODE_FEATURES
 from botgraph_ml.config import LabelFile, load_labels, load_params, repo_path
-from botgraph_ml.metrics import best_f1_threshold, evaluate_scores, json_safe
+from botgraph_ml.metrics import best_f1_threshold, evaluate_scores, holdout_report, json_safe
 
 FEATURES = list(NODE_FEATURES)
 
@@ -78,14 +82,6 @@ def run(
     threshold = best_f1_threshold(val_scored["y"].to_numpy(), val_scored["score"].to_numpy())
     test_scored = score(model, test_df)
 
-    per_scenario = {}
-    for sid, part in test_scored.groupby("scenario"):
-        # Host IPs repeat across CTU-13 scenarios, so hosts are evaluated per scenario.
-        per_scenario[str(sid)] = {
-            "family": labels.scenarios[int(sid)].family,
-            **evaluate_scores(part, threshold),
-        }
-
     report = {
         "model": "xgboost_node_features",
         "split": p["split"],
@@ -93,10 +89,7 @@ def run(
         "rows": {"train": len(train_df), "val": len(val_df), "test": len(test_df)},
         "best_iteration": int(model.best_iteration),
         "val": evaluate_scores(val_scored, threshold)["window"],
-        "test": {
-            "window": evaluate_scores(test_scored, threshold)["window"],
-            "per_scenario": per_scenario,
-        },
+        "test": holdout_report(test_scored, threshold, labels.families()),
         "feature_importance": dict(
             sorted(
                 zip(FEATURES, model.feature_importances_.astype(float).tolist(), strict=True),

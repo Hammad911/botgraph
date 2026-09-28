@@ -54,6 +54,9 @@ class LabelFile:
     scenarios: dict[int, Scenario]
     splits: dict[str, dict[str, list[int]]]
 
+    def families(self) -> dict[int, str]:
+        return {sid: s.family for sid, s in self.scenarios.items()}
+
     def split(self, name: str) -> dict[str, list[int]]:
         if name not in self.splits:
             raise KeyError(f"unknown split {name!r}; available: {sorted(self.splits)}")

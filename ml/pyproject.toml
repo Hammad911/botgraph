@@ -5,16 +5,27 @@ description = "Dataset preparation, training and evaluation for BotGraph"
 requires-python = ">=3.11"
 dependencies = [
     "botgraph-core",
+    "mlflow-skinny>=2.16",
+    "optuna>=4.0",
     "pyarrow>=16.0",
     "pyyaml>=6.0",
     "requests>=2.32",
     "scikit-learn>=1.5",
+    "torch>=2.4",
+    "torch-geometric>=2.6",
     "tqdm>=4.66",
     "xgboost>=2.1",
 ]
 
 [tool.uv.sources]
 botgraph-core = { workspace = true }
+# CPU wheels on Linux keep CI and containers small; use your own torch build for CUDA.
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [build-system]
 requires = ["hatchling"]

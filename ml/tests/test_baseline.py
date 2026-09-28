@@ -1,14 +1,20 @@
-"""End-to-end baseline run on synthetic node tables (no dataset download needed)."""
+"""End-to-end baseline run on synthetic node tables (no dataset download needed).
+
+XGBoost runs in a spawned child process: on macOS its OpenMP runtime (Homebrew libomp)
+deadlocks against torch's bundled libomp when both load into one process, and pytest
+imports every test module into the same interpreter.
+"""
 
 from __future__ import annotations
 
+import multiprocessing
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from botgraph_core import NODE_FEATURES
-from botgraph_ml.baseline import run
 from botgraph_ml.config import LabelFile, Scenario
 
 PARAMS = {
@@ -42,16 +48,23 @@ def _nodes(rng: np.random.Generator, windows: int) -> pd.DataFrame:
     return pd.DataFrame(rows).astype({"y": "int8"})
 
 
-def test_baseline_learns_separable_signal(tmp_path: Path) -> None:
-    rng = np.random.default_rng(0)
-    for sid in (1, 2, 3):
-        _nodes(rng, windows=40).to_parquet(tmp_path / f"scenario={sid}.parquet", index=False)
+def _run_baseline(nodes_dir: str) -> dict[str, Any]:
+    from botgraph_ml.baseline import run  # imported only in the child process
+
     labels = LabelFile(
         scenarios={sid: Scenario(sid, f"fam{sid}", (), ()) for sid in (1, 2, 3)},
         splits={"s": {"train": [1], "val": [2], "test": [3]}},
     )
+    _, report = run(labels, Path(nodes_dir), PARAMS)
+    return report
 
-    _, report = run(labels, tmp_path, PARAMS)
+
+def test_baseline_learns_separable_signal(tmp_path: Path) -> None:
+    rng = np.random.default_rng(0)
+    for sid in (1, 2, 3):
+        _nodes(rng, windows=40).to_parquet(tmp_path / f"scenario={sid}.parquet", index=False)
+    with multiprocessing.get_context("spawn").Pool(1) as pool:
+        report = pool.apply(_run_baseline, (str(tmp_path),))
 
     assert report["test"]["window"]["f1"] > 0.95
     assert report["test"]["per_scenario"]["3"]["bots_detected"] == 2

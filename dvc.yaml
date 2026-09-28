@@ -60,3 +60,30 @@ stages:
       - packages/botgraph-core/src/botgraph_core/adapters.py
     outs:
       - ml/data/processed/iot23/flows
+
+  train_gnn:
+    foreach: [graphsage, e_graphsage, gatv2]
+    do:
+      cmd: python -m botgraph_ml.gnn.train --model ${item}
+      deps:
+        - ml/data/processed/ctu13/graphs
+        - ml/labels/ctu13.yaml
+        - ml/src/botgraph_ml/gnn
+        - ml/src/botgraph_ml/metrics.py
+      params: [gnn]
+      outs:
+        - ml/models/${item}
+      metrics:
+        - ml/reports/${item}/metrics.json:
+            cache: false
+
+  compare:
+    cmd: python -m botgraph_ml.compare
+    deps:
+      - ml/reports/baseline/metrics.json
+      - ml/reports/graphsage/metrics.json
+      - ml/reports/e_graphsage/metrics.json
+      - ml/reports/gatv2/metrics.json
+    outs:
+      - ml/reports/comparison.md:
+          cache: false

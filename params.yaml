@@ -34,3 +34,18 @@ baseline:
   colsample_bytree: 0.8
   early_stopping_rounds: 40
   seed: 42
+
+gnn:
+  split: holdout_families
+  model: e_graphsage # graphsage | e_graphsage | gatv2 (CLI --model overrides)
+  hidden: 64
+  layers: 2
+  dropout: 0.2
+  heads: 4 # GATv2 attention heads
+  lr: 0.003
+  weight_decay: 0.0001
+  epochs: 60
+  patience: 10 # early stopping on validation PR-AUC
+  batch_graphs: 8 # windows per mini-batch
+  device: auto # auto | cpu | cuda
+  seed: 42

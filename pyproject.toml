@@ -50,3 +50,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["packages", "ml"]
 addopts = "-q --strict-markers"
+filterwarnings = [
+    # Emitted by torch_geometric on import; not actionable here.
+    "ignore:`torch.jit.script` is deprecated:FutureWarning",
+]
