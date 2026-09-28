@@ -37,3 +37,6 @@ node_modules/
 
 # Trained model bundles are DVC pipeline outputs
 ml/models/
+
+# Training logs
+ml/reports/logs/

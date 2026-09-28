@@ -44,8 +44,8 @@ gnn:
   heads: 4 # GATv2 attention heads
   lr: 0.003
   weight_decay: 0.0001
-  epochs: 60
-  patience: 10 # early stopping on validation PR-AUC
+  epochs: 30
+  patience: 6 # early stopping on validation PR-AUC
   batch_graphs: 8 # windows per mini-batch
   device: auto # auto | cpu | cuda
   seed: 42

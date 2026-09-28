@@ -25,6 +25,7 @@ import torch.nn.functional as F  # noqa: N812
 from sklearn.metrics import average_precision_score
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
+from tqdm import tqdm
 
 from botgraph_ml.config import load_labels, load_params, repo_path
 from botgraph_ml.gnn.data import WindowDataset, fit_scaler, labelled_rows, list_windows
@@ -99,6 +100,7 @@ def fit(
     device: torch.device,
     pos_weight: float,
     on_epoch: EpochLogger | None = None,
+    progress: bool = False,
 ) -> FitResult:
     """Train with early stopping on validation PR-AUC; returns the best checkpoint."""
     seed_everything(int(cfg["seed"]))
@@ -117,7 +119,10 @@ def fit(
     for epoch in range(1, int(cfg["epochs"]) + 1):
         model.train()
         total, count = 0.0, 0
-        for batch in train_loader:
+        bar = tqdm(
+            train_loader, desc=f"epoch {epoch}", unit="batch", leave=False, disable=not progress
+        )
+        for batch in bar:
             batch = batch.to(device)
             mask = batch.y >= 0  # unknown hosts give structure but no loss
             if not mask.any():
@@ -136,6 +141,12 @@ def fit(
         val_ap = _average_precision(predict(model, val_loader, device))
         stats = {"train_loss": total / max(count, 1), "val_pr_auc": val_ap}
         history.append({"epoch": epoch, **stats})
+        if progress:
+            marker = "  *best*" if val_ap > best_ap + 1e-4 else ""
+            tqdm.write(
+                f"epoch {epoch:>3}: train_loss={stats['train_loss']:.4f} "
+                f"val_pr_auc={val_ap:.4f}{marker}"
+            )
         if on_epoch:
             on_epoch(epoch, stats)
 
@@ -188,6 +199,7 @@ def main(argv: list[str] | None = None) -> None:
             device,
             pos_weight=counts.neg / counts.pos,
             on_epoch=lambda epoch, stats: tracker.log_metrics(stats, step=epoch),
+            progress=True,
         )
         train_time = time.perf_counter() - started
 
