@@ -20,8 +20,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 7287,
@@ -49,13 +49,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 6,
+          "benign_alerted": 4,
           "benign_total": 6,
-          "precision": 0.14285714285714285,
+          "precision": 0.2,
           "recall": 1.0,
           "bot_windows_flagged": 1.0,
           "benign_windows_flagged": 0.29901570158989405,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 660.0
         }
       }
     }

@@ -5,9 +5,38 @@ host-to-host communication graph every minute and uses a GNN trained in-house to
 hosts. It targets the coordinated behaviour that per-flow detectors miss: C2 beaconing,
 fan-out scanning and peer-to-peer bot meshes.
 
-> Status: **Phases 0–3 done.** Feature pipeline, dataset pipeline, XGBoost baseline and three
-> GNNs (with explanations and HPO) are implemented and tested. Streaming services and the web
-> console come next.
+> Status: **Phases 0–3 done.** Data pipeline, XGBoost baseline and three GNNs are trained and
+> evaluated on all 13 CTU-13 scenarios with leave-one-family-out cross-validation. Streaming
+> services and the web console come next. See the [model card](docs/model_card.md).
+
+## Results
+
+Evaluated with **leave-one-family-out cross-validation** on CTU-13: each of the 7 botnet
+families is the test set once and is never seen in training; decision thresholds and the alert
+rule are chosen on a *different* validation family.
+
+| Model | Mean PR-AUC (7 unseen families) | Bots alerted | Normal hosts falsely alerted |
+|---|---|---|---|
+| XGBoost (host features only) | 0.750 ± 0.19 | 30/35 | 11/78 |
+| E-GraphSAGE | 0.844 ± 0.25 | 29/35 | 10/78 |
+| **GATv2** | **0.870 ± 0.25** | **30/35** | **5/78** |
+
+Alerts use the tuned rule "flagged in 12 of the last 15 minutes". With the same rule, **GATv2
+catches as many bots as XGBoost with half the false alerts**, and it scores each 5-minute
+window in ~10 ms on a laptop CPU.
+
+Two alert levels are planned for the live system, both measured on the same folds:
+
+| Level | Rule | GATv2 bots | GATv2 false alerts | Median time to alert |
+|---|---|---|---|---|
+| Warning | 3 of last 5 min | 34/35 | 22/78 | 2 min |
+| Alert | 12 of last 15 min | 30/35 | 5/78 | 28 min |
+
+**Limitations.** CTU-13 has only 6 labelled normal hosts (the same ones in every scenario), so
+the false-alert numbers come from a small population. The peer-to-peer family NSIS.ay is hard
+for every model (PR-AUC 0.30–0.42); short-lived bots (Sogou, a 26-minute capture) can finish
+before the strict alert rule fires. Full details: [`ml/reports/comparison.md`](ml/reports/comparison.md),
+[`ml/reports/alert_tuning.md`](ml/reports/alert_tuning.md).
 
 ## How it works
 
@@ -88,8 +117,8 @@ MLFLOW_TRACKING_URI=http://localhost:5000 uv run python -m botgraph_ml.gnn.train
 | Model | Message passing |
 |---|---|
 | GraphSAGE | Mean of neighbour embeddings; ignores flow statistics |
-| **E-GraphSAGE** | Each message includes the flow edge's features (bytes, timing, periodicity, …) |
-| GATv2 | Attention over neighbours; edge features only weight the attention |
+| E-GraphSAGE | Each message includes the flow edge's features (bytes, timing, periodicity, …) |
+| **GATv2** | Attention over neighbours; edge features weight the attention (primary model) |
 
 All three share one architecture (encoder, residual conv layers, MLP head), so comparisons
 isolate the message-passing layer. Each flow is added in both directions with a direction flag,
@@ -97,14 +126,22 @@ so a host learns from traffic it sends as well as traffic it receives.
 
 On a synthetic sanity check where bots differ **only** in a periodic flow to a shared C2 host
 (node features are pure noise), validation PR-AUC was GraphSAGE 0.49, GATv2 0.60 and
-E-GraphSAGE 1.00 (chance level 0.33). This is why E-GraphSAGE is the primary model.
+E-GraphSAGE 1.00 (chance level 0.33): passing flow statistics inside messages matters when the
+evidence lives only on edges. On real CTU-13 traffic, where host features also carry signal,
+GATv2 generalised best to unseen families, so it is the primary model.
+
+Cross-validation and alert tuning:
+
+```bash
+uv run python -m botgraph_ml.gnn.train --model gatv2 --split lofo:Menti --epochs 10 --patience 3
+uv run python -m botgraph_ml.alert_tuning   # choose the alert rule on validation folds only
+```
 
 Explanations (GNNExplainer) list the flows and host features that drove a detection, with raw
 (unscaled) values an analyst can read.
 
-The baseline report includes window- and host-level precision, recall, F1, PR-AUC, FPR at 95%
-recall and time-to-detect, broken down per held-out botnet family. The decision threshold is
-chosen on the validation families only.
+Every report includes window-level precision, recall, F1, PR-AUC and FPR at 95% recall, plus
+host-level alert outcomes (bots and normal hosts alerted, time to alert) per botnet family.
 
 ## Datasets
 
@@ -117,11 +154,12 @@ chosen on the validation families only.
 - [x] Phase 0: monorepo, tooling, CI, local infrastructure
 - [~] Phase 1: dataset download + normalization ✅, DVC pipeline ✅, EDA
 - [x] Phase 2: graph construction, XGBoost baseline, evaluation harness
-- [x] Phase 3: GraphSAGE / E-GraphSAGE / GATv2, HPO, explainability, MLflow tracking
+- [x] Phase 3: GraphSAGE / E-GraphSAGE / GATv2, HPO, explainability, MLflow tracking,
+      leave-one-family-out CV, alert-rule tuning
 - [ ] Phase 4: streaming pipeline (ingest → graph-builder → inference) + replay tool
 - [ ] Phase 5: FastAPI + Next.js analyst console
 - [ ] Phase 6: observability, drift monitoring, security hardening, Helm
-- [ ] Phase 7: model card, demo, write-up
+- [ ] Phase 7: demo, write-up ([model card](docs/model_card.md) done)
 
 ## Known issues
 

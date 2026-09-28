@@ -1,0 +1,83 @@
+{
+  "baseline": {
+    "chosen_rule": {
+      "k": 15,
+      "n": 15
+    },
+    "val_chosen": {
+      "bots_alerted": 33,
+      "bots_total": 35,
+      "benign_alerted": 9,
+      "benign_total": 78,
+      "median_time_to_alert_min": 37.0
+    },
+    "test_default": {
+      "bots_alerted": 32,
+      "bots_total": 35,
+      "benign_alerted": 40,
+      "benign_total": 78,
+      "median_time_to_alert_min": 2.0
+    },
+    "test_chosen": {
+      "bots_alerted": 20,
+      "bots_total": 35,
+      "benign_alerted": 6,
+      "benign_total": 78,
+      "median_time_to_alert_min": 154.5
+    }
+  },
+  "e_graphsage": {
+    "chosen_rule": {
+      "k": 12,
+      "n": 15
+    },
+    "val_chosen": {
+      "bots_alerted": 32,
+      "bots_total": 35,
+      "benign_alerted": 6,
+      "benign_total": 78,
+      "median_time_to_alert_min": 28.0
+    },
+    "test_default": {
+      "bots_alerted": 32,
+      "bots_total": 35,
+      "benign_alerted": 21,
+      "benign_total": 78,
+      "median_time_to_alert_min": 2.0
+    },
+    "test_chosen": {
+      "bots_alerted": 29,
+      "bots_total": 35,
+      "benign_alerted": 10,
+      "benign_total": 78,
+      "median_time_to_alert_min": 29.0
+    }
+  },
+  "gatv2": {
+    "chosen_rule": {
+      "k": 12,
+      "n": 15
+    },
+    "val_chosen": {
+      "bots_alerted": 33,
+      "bots_total": 35,
+      "benign_alerted": 1,
+      "benign_total": 78,
+      "median_time_to_alert_min": 29.0
+    },
+    "test_default": {
+      "bots_alerted": 34,
+      "bots_total": 35,
+      "benign_alerted": 22,
+      "benign_total": 78,
+      "median_time_to_alert_min": 2.0
+    },
+    "test_chosen": {
+      "bots_alerted": 30,
+      "bots_total": 35,
+      "benign_alerted": 5,
+      "benign_total": 78,
+      "median_time_to_alert_min": 28.0
+    }
+  }
+}

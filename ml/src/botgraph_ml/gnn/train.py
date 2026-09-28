@@ -36,7 +36,13 @@ from botgraph_ml.gnn.models import (
     load_bundle,
     save_bundle,
 )
-from botgraph_ml.metrics import best_f1_threshold, evaluate_scores, holdout_report, json_safe
+from botgraph_ml.metrics import (
+    best_f1_threshold,
+    evaluate_scores,
+    holdout_report,
+    json_safe,
+    save_scores,
+)
 from botgraph_ml.tracking import tracked_run
 
 EpochLogger = Callable[[int, dict[str, float]], None]
@@ -263,6 +269,7 @@ def main(argv: list[str] | None = None) -> None:
 
         reports_dir.mkdir(parents=True, exist_ok=True)
         (reports_dir / "metrics.json").write_text(json.dumps(json_safe(report), indent=2))
+        save_scores(reports_dir, val=val_scored, test=test_scored)
         tracker.log_metrics({"test": report["test"]["window"], "threshold": threshold})
         tracker.log_artifacts(models_dir)
         tracker.log_artifacts(reports_dir)

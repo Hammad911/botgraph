@@ -15,8 +15,8 @@
   "best_epoch": 2,
   "train_time_s": 825.2,
   "latency_ms_per_window": {
-    "mean": 22.867913000018675,
-    "p95": 35.642749750877556
+    "mean": 18.740694494747856,
+    "p95": 29.338635749809328
   },
   "val": {
     "n": 25142,
@@ -30,8 +30,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 7425,
@@ -59,13 +59,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 1,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.5,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 0.8355263157894737,
           "benign_windows_flagged": 0.012587134868618002,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 5160.0
         }
       },
       "2": {
@@ -83,13 +83,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 1,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.5,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 0.9953051643192489,
           "benign_windows_flagged": 0.02907479463899697,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 720.0
         }
       },
       "9": {
@@ -113,7 +113,7 @@
           "recall": 1.0,
           "bot_windows_flagged": 0.8443595818343814,
           "benign_windows_flagged": 0.05386503901355386,
-          "median_time_to_alert_s": 510.0
+          "median_time_to_alert_s": 9240.0
         }
       }
     }

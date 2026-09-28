@@ -20,8 +20,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 167,
@@ -47,15 +47,15 @@
           "fpr_at_95_recall": 0.46405228758169936
         },
         "alerts": {
-          "bots_alerted": 1,
+          "bots_alerted": 0,
           "bots_total": 1,
-          "benign_alerted": 2,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.3333333333333333,
-          "recall": 1.0,
+          "precision": null,
+          "recall": 0.0,
           "bot_windows_flagged": 0.7142857142857143,
           "benign_windows_flagged": 0.05974358974358975,
-          "median_time_to_alert_s": 420.0
+          "median_time_to_alert_s": null
         }
       }
     }

@@ -55,7 +55,7 @@ def _run_baseline(nodes_dir: str) -> dict[str, Any]:
         scenarios={sid: Scenario(sid, f"fam{sid}", (), ()) for sid in (1, 2, 3)},
         splits={"s": {"train": [1], "val": [2], "test": [3]}},
     )
-    _, report = run(labels, Path(nodes_dir), PARAMS)
+    _, report, _ = run(labels, Path(nodes_dir), PARAMS)
     return report
 
 

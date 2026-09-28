@@ -15,8 +15,8 @@
   "best_epoch": 5,
   "train_time_s": 2705.2,
   "latency_ms_per_window": {
-    "mean": 12.598818845967449,
-    "p95": 21.08830199813383
+    "mean": 9.649482192309314,
+    "p95": 14.406010250240797
   },
   "val": {
     "n": 5759,
@@ -30,8 +30,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 167,
@@ -57,15 +57,15 @@
           "fpr_at_95_recall": 0.026143790849673203
         },
         "alerts": {
-          "bots_alerted": 1,
+          "bots_alerted": 0,
           "bots_total": 1,
           "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 1.0,
-          "recall": 1.0,
+          "precision": null,
+          "recall": 0.0,
           "bot_windows_flagged": 0.5714285714285714,
           "benign_windows_flagged": 0.0,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": null
         }
       }
     }

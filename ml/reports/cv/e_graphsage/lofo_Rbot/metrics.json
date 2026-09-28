@@ -15,8 +15,8 @@
   "best_epoch": 7,
   "train_time_s": 2690.7,
   "latency_ms_per_window": {
-    "mean": 5.020520966825453,
-    "p95": 13.008291000005556
+    "mean": 4.326246079901619,
+    "p95": 10.940416999801528
   },
   "val": {
     "n": 167,
@@ -30,8 +30,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 25142,
@@ -59,13 +59,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 3,
+          "benign_alerted": 2,
           "benign_total": 6,
-          "precision": 0.25,
+          "precision": 0.3333333333333333,
           "recall": 1.0,
           "bot_windows_flagged": 0.8218623481781376,
           "benign_windows_flagged": 0.16026493970207115,
-          "median_time_to_alert_s": 2520.0
+          "median_time_to_alert_s": 6420.0
         }
       },
       "4": {
@@ -83,13 +83,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 2,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.3333333333333333,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 0.9090909090909091,
           "benign_windows_flagged": 0.008350184155412724,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 780.0
         }
       },
       "10": {
@@ -107,13 +107,13 @@
         "alerts": {
           "bots_alerted": 10,
           "bots_total": 10,
-          "benign_alerted": 3,
+          "benign_alerted": 1,
           "benign_total": 6,
-          "precision": 0.7692307692307693,
+          "precision": 0.9090909090909091,
           "recall": 1.0,
           "bot_windows_flagged": 0.6700773048671161,
           "benign_windows_flagged": 0.03939481457438742,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 1710.0
         }
       },
       "11": {
@@ -129,15 +129,15 @@
           "fpr_at_95_recall": 1.0
         },
         "alerts": {
-          "bots_alerted": 3,
+          "bots_alerted": 1,
           "bots_total": 3,
-          "benign_alerted": 1,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.75,
-          "recall": 1.0,
+          "precision": 1.0,
+          "recall": 0.3333333333333333,
           "bot_windows_flagged": 0.7365196078431372,
           "benign_windows_flagged": 0.059436274509803926,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 720.0
         }
       }
     }

@@ -52,5 +52,7 @@ gnn:
 
 alert:
   # Alert on a host once it is flagged in >= k of its last n windows (1-minute hop).
-  k: 3
-  n: 5
+  # 12 of 15 was chosen on validation families only (python -m botgraph_ml.alert_tuning);
+  # the old 3 of 5 raised false alerts on 22/78 normal hosts vs 5/78 for GATv2.
+  k: 12
+  n: 15

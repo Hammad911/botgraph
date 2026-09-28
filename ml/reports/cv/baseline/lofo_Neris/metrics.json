@@ -20,8 +20,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 7425,
@@ -49,13 +49,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 4,
+          "benign_alerted": 1,
           "benign_total": 6,
-          "precision": 0.2,
+          "precision": 0.5,
           "recall": 1.0,
           "bot_windows_flagged": 1.0,
           "benign_windows_flagged": 0.06346541042315224,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 4320.0
         }
       },
       "2": {
@@ -73,13 +73,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 4,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.2,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 1.0,
           "benign_windows_flagged": 0.10810105839112465,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 660.0
         }
       },
       "9": {
@@ -97,13 +97,13 @@
         "alerts": {
           "bots_alerted": 10,
           "bots_total": 10,
-          "benign_alerted": 5,
+          "benign_alerted": 2,
           "benign_total": 6,
-          "precision": 0.6666666666666666,
+          "precision": 0.8333333333333334,
           "recall": 1.0,
           "bot_windows_flagged": 0.779055218068401,
           "benign_windows_flagged": 0.0715817047061564,
-          "median_time_to_alert_s": 510.0
+          "median_time_to_alert_s": 9720.0
         }
       }
     }

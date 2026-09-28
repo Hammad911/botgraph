@@ -15,8 +15,8 @@
   "best_epoch": 8,
   "train_time_s": 3412.5,
   "latency_ms_per_window": {
-    "mean": 8.34739467689136,
-    "p95": 21.448415998747805
+    "mean": 6.556157482871683,
+    "p95": 15.66879100209917
   },
   "val": {
     "n": 167,
@@ -30,8 +30,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 25142,
@@ -59,13 +59,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 3,
+          "benign_alerted": 2,
           "benign_total": 6,
-          "precision": 0.25,
+          "precision": 0.3333333333333333,
           "recall": 1.0,
           "bot_windows_flagged": 0.8284412955465587,
           "benign_windows_flagged": 0.15045992016911122,
-          "median_time_to_alert_s": 1800.0
+          "median_time_to_alert_s": 6420.0
         }
       },
       "4": {
@@ -83,13 +83,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 3,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.25,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 0.9595959595959596,
           "benign_windows_flagged": 0.017069873363063,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 780.0
         }
       },
       "10": {
@@ -107,13 +107,13 @@
         "alerts": {
           "bots_alerted": 10,
           "bots_total": 10,
-          "benign_alerted": 4,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.7142857142857143,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 0.8257280266121496,
           "benign_windows_flagged": 0.05062109442612963,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 1680.0
         }
       },
       "11": {
@@ -129,15 +129,15 @@
           "fpr_at_95_recall": 0.9572649572649573
         },
         "alerts": {
-          "bots_alerted": 3,
+          "bots_alerted": 1,
           "bots_total": 3,
-          "benign_alerted": 1,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.75,
-          "recall": 1.0,
+          "precision": 1.0,
+          "recall": 0.3333333333333333,
           "bot_windows_flagged": 0.7977941176470589,
           "benign_windows_flagged": 0.09865196078431372,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 720.0
         }
       }
     }

@@ -35,6 +35,7 @@ from botgraph_ml.metrics import (
     evaluate_scores,
     holdout_report,
     json_safe,
+    save_scores,
 )
 
 FEATURES = list(NODE_FEATURES)
@@ -84,7 +85,7 @@ def score(model: XGBClassifier, df: pd.DataFrame) -> pd.DataFrame:
 
 def run(
     labels: LabelFile, nodes_dir: Path, p: dict[str, Any], rule: AlertRule | None = None
-) -> tuple[XGBClassifier, dict[str, Any]]:
+) -> tuple[XGBClassifier, dict[str, Any], dict[str, pd.DataFrame]]:
     split = labels.split(p["split"])
     train_df = load_nodes(nodes_dir, split["train"])
     val_df = load_nodes(nodes_dir, split["val"])
@@ -110,7 +111,7 @@ def run(
             )
         ),
     }
-    return model, report
+    return model, report, {"val": val_scored, "test": test_scored}
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -127,7 +128,7 @@ def main(argv: list[str] | None = None) -> None:
     labels = load_labels(repo_path(params["ctu13"]["labels"]))
     nodes_dir = repo_path(params["data"]["processed_dir"]) / "ctu13" / "nodes"
 
-    model, report = run(labels, nodes_dir, p, alert_rule(params))
+    model, report, scored = run(labels, nodes_dir, p, alert_rule(params))
 
     reports_dir, models_dir = output_dirs(
         params, "baseline", p["split"], params["baseline"]["split"]
@@ -135,6 +136,7 @@ def main(argv: list[str] | None = None) -> None:
     reports_dir.mkdir(parents=True, exist_ok=True)
     models_dir.mkdir(parents=True, exist_ok=True)
     (reports_dir / "metrics.json").write_text(json.dumps(json_safe(report), indent=2))
+    save_scores(reports_dir, **scored)
     model.save_model(models_dir / "xgb.json")
 
     w = report["test"]["window"]

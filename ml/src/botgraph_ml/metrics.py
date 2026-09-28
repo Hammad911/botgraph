@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -61,8 +62,8 @@ class AlertRule:
     several consecutive windows; requiring ``k`` hits filters out one-off false positives.
     """
 
-    k: int = 3
-    n: int = 5
+    k: int = 12
+    n: int = 15
 
     def __post_init__(self) -> None:
         if not 1 <= self.k <= self.n:
@@ -142,6 +143,17 @@ def holdout_report(
         "window": evaluate_scores(scored, threshold, rule)["window"],
         "per_scenario": per_scenario,
     }
+
+
+SCORE_COLUMNS = ["scenario", "window_id", "window_start", "ip", "y", "score"]
+
+
+def save_scores(reports_dir: Path, **scored: pd.DataFrame) -> None:
+    """Persist per-window scores (e.g. val=..., test=...) for later analysis such as
+    alert-rule tuning, as ``<name>_scores.parquet`` next to the run's metrics.json."""
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    for name, frame in scored.items():
+        frame[SCORE_COLUMNS].to_parquet(reports_dir / f"{name}_scores.parquet", index=False)
 
 
 def json_safe(value: Any) -> Any:

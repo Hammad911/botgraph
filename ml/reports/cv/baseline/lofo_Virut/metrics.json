@@ -20,8 +20,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 5759,
@@ -55,7 +55,7 @@
           "recall": 1.0,
           "bot_windows_flagged": 0.8571428571428571,
           "benign_windows_flagged": 0.0,
-          "median_time_to_alert_s": 360.0
+          "median_time_to_alert_s": 900.0
         }
       },
       "13": {
@@ -73,13 +73,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 1,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.5,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 0.2383367139959432,
           "benign_windows_flagged": 0.02280701754385965,
-          "median_time_to_alert_s": 540.0
+          "median_time_to_alert_s": 1080.0
         }
       }
     }

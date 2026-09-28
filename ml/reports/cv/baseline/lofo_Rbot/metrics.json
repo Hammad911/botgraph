@@ -20,8 +20,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 25142,
@@ -49,13 +49,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 4,
+          "benign_alerted": 2,
           "benign_total": 6,
-          "precision": 0.2,
+          "precision": 0.3333333333333333,
           "recall": 1.0,
           "bot_windows_flagged": 0.5495951417004049,
           "benign_windows_flagged": 0.15966377850593538,
-          "median_time_to_alert_s": 2520.0
+          "median_time_to_alert_s": 6420.0
         }
       },
       "4": {
@@ -73,13 +73,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 2,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.3333333333333333,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 0.8636363636363636,
           "benign_windows_flagged": 0.01579463662405816,
-          "median_time_to_alert_s": 540.0
+          "median_time_to_alert_s": 1320.0
         }
       },
       "10": {
@@ -97,13 +97,13 @@
         "alerts": {
           "bots_alerted": 10,
           "bots_total": 10,
-          "benign_alerted": 6,
+          "benign_alerted": 1,
           "benign_total": 6,
-          "precision": 0.625,
+          "precision": 0.9090909090909091,
           "recall": 1.0,
           "bot_windows_flagged": 0.49965893852668775,
           "benign_windows_flagged": 0.07074001420499453,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 12690.0
         }
       },
       "11": {
@@ -119,15 +119,15 @@
           "fpr_at_95_recall": 0.08547008547008547
         },
         "alerts": {
-          "bots_alerted": 3,
+          "bots_alerted": 2,
           "bots_total": 3,
-          "benign_alerted": 1,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.75,
-          "recall": 1.0,
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
           "bot_windows_flagged": 0.8382352941176471,
           "benign_windows_flagged": 0.08823529411764706,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 780.0
         }
       }
     }

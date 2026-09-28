@@ -20,8 +20,8 @@
   },
   "test": {
     "alert_rule": {
-      "k": 3,
-      "n": 5
+      "k": 12,
+      "n": 15
     },
     "window": {
       "n": 8980,
@@ -49,13 +49,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 2,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.3333333333333333,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 0.9924242424242424,
           "benign_windows_flagged": 0.015158635224424698,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 780.0
         }
       },
       "7": {
@@ -71,15 +71,15 @@
           "fpr_at_95_recall": 0.5555555555555556
         },
         "alerts": {
-          "bots_alerted": 1,
+          "bots_alerted": 0,
           "bots_total": 1,
           "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 1.0,
-          "recall": 1.0,
+          "precision": null,
+          "recall": 0.0,
           "bot_windows_flagged": 0.21428571428571427,
           "benign_windows_flagged": 0.0,
-          "median_time_to_alert_s": 240.0
+          "median_time_to_alert_s": null
         }
       },
       "8": {
@@ -97,13 +97,13 @@
         "alerts": {
           "bots_alerted": 1,
           "bots_total": 1,
-          "benign_alerted": 4,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.2,
+          "precision": 1.0,
           "recall": 1.0,
           "bot_windows_flagged": 0.26455026455026454,
           "benign_windows_flagged": 0.018626235692686864,
-          "median_time_to_alert_s": 120.0
+          "median_time_to_alert_s": 14220.0
         }
       },
       "12": {
@@ -119,15 +119,15 @@
           "fpr_at_95_recall": 1.0
         },
         "alerts": {
-          "bots_alerted": 2,
+          "bots_alerted": 0,
           "bots_total": 3,
-          "benign_alerted": 2,
+          "benign_alerted": 0,
           "benign_total": 6,
-          "precision": 0.5,
-          "recall": 0.6666666666666666,
+          "precision": null,
+          "recall": 0.0,
           "bot_windows_flagged": 0.084566010795519,
           "benign_windows_flagged": 0.02781954887218045,
-          "median_time_to_alert_s": 180.0
+          "median_time_to_alert_s": null
         }
       }
     }
