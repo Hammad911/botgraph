@@ -7,11 +7,12 @@ import pandas as pd
 import pytest
 
 from botgraph_ml.metrics import (
+    AlertRule,
     best_f1_threshold,
     binary_metrics,
     evaluate_scores,
     fpr_at_recall,
-    host_scores,
+    host_alerts,
     json_safe,
 )
 
@@ -44,23 +45,51 @@ def test_best_f1_threshold() -> None:
     assert 0.4 < t <= 0.6
 
 
-def test_host_scores_time_to_detect() -> None:
+def test_alert_rule_needs_k_hits_in_last_n_windows() -> None:
     windows = pd.DataFrame(
         {
-            "ip": ["bot", "bot", "bot", "ok", "ok"],
-            "y": [1, 1, 1, 0, 0],
-            "score": [0.2, 0.3, 0.9, 0.1, 0.2],
-            "window_start": [0.0, 60.0, 120.0, 0.0, 60.0],
+            "ip": ["bot"] * 5 + ["noisy"] * 5,
+            "y": [1] * 5 + [0] * 5,
+            # bot: 3 hits within its last 5 windows by t=240; noisy: a single one-off hit
+            "score": [0.2, 0.9, 0.9, 0.2, 0.9, 0.9, 0.1, 0.1, 0.1, 0.1],
+            "window_start": [0.0, 60.0, 120.0, 180.0, 240.0] * 2,
         }
     )
-    hosts = host_scores(windows, threshold=0.5).set_index("ip")
-    assert hosts.loc["bot", "time_to_detect_s"] == 120.0
-    assert math.isnan(hosts.loc["ok", "time_to_detect_s"])
-    assert hosts.loc["bot", "score"] == pytest.approx(0.4667, abs=1e-3)
+    hosts = host_alerts(windows, threshold=0.5, rule=AlertRule(k=3, n=5)).set_index("ip")
+    assert hosts.loc["bot", "alerted"]
+    assert hosts.loc["bot", "time_to_alert_s"] == 240.0
+    assert not hosts.loc["noisy", "alerted"]
+    assert math.isnan(hosts.loc["noisy", "time_to_alert_s"])
+    assert hosts.loc["noisy", "flagged_frac"] == pytest.approx(0.2)
 
-    summary = evaluate_scores(windows, threshold=0.5)
-    assert summary["bots_detected"] == summary["bots_total"] == 1
-    assert summary["median_time_to_detect_s"] == 120.0
+    # k=1 alerts on any single hit, so the noisy host now alerts too
+    loose = host_alerts(windows, threshold=0.5, rule=AlertRule(k=1, n=5)).set_index("ip")
+    assert loose["alerted"].all()
+
+    summary = evaluate_scores(windows, threshold=0.5, rule=AlertRule(k=3, n=5))["alerts"]
+    assert (summary["bots_alerted"], summary["bots_total"]) == (1, 1)
+    assert (summary["benign_alerted"], summary["benign_total"]) == (0, 1)
+    assert summary["precision"] == 1.0
+    assert summary["median_time_to_alert_s"] == 240.0
+
+
+def test_alert_rule_window_only_looks_back_n() -> None:
+    # Three hits spread so that no 3 fall within any 3 consecutive windows.
+    windows = pd.DataFrame(
+        {
+            "ip": ["h"] * 7,
+            "y": [1] * 7,
+            "score": [0.9, 0.1, 0.1, 0.9, 0.1, 0.1, 0.9],
+            "window_start": [60.0 * i for i in range(7)],
+        }
+    )
+    assert not host_alerts(windows, 0.5, AlertRule(k=2, n=3))["alerted"].iloc[0]
+    assert host_alerts(windows, 0.5, AlertRule(k=2, n=4))["alerted"].iloc[0]
+
+
+def test_invalid_alert_rule() -> None:
+    with pytest.raises(ValueError):
+        AlertRule(k=4, n=3)
 
 
 def test_json_safe() -> None:

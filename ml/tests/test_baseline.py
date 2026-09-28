@@ -67,5 +67,6 @@ def test_baseline_learns_separable_signal(tmp_path: Path) -> None:
         report = pool.apply(_run_baseline, (str(tmp_path),))
 
     assert report["test"]["window"]["f1"] > 0.95
-    assert report["test"]["per_scenario"]["3"]["bots_detected"] == 2
+    alerts = report["test"]["per_scenario"]["3"]["alerts"]
+    assert (alerts["bots_alerted"], alerts["benign_alerted"]) == (2, 0)
     assert next(iter(report["feature_importance"])) == "periodicity"

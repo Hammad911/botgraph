@@ -15,8 +15,8 @@
   "best_epoch": 10,
   "train_time_s": 3721.6,
   "latency_ms_per_window": {
-    "mean": 6.793851530447211,
-    "p95": 10.825898099665212
+    "mean": 6.062590582801138,
+    "p95": 10.022057849164414
   },
   "val": {
     "n": 5759,
@@ -29,6 +29,10 @@
     "fpr_at_95_recall": 0.0
   },
   "test": {
+    "alert_rule": {
+      "k": 3,
+      "n": 5
+    },
     "window": {
       "n": 8980,
       "n_pos": 1482,
@@ -52,19 +56,17 @@
           "roc_auc": 0.9998556998556998,
           "fpr_at_95_recall": 0.0
         },
-        "host": {
-          "n": 7,
-          "n_pos": 1,
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 0,
+          "benign_total": 6,
           "precision": 1.0,
           "recall": 1.0,
-          "f1": 1.0,
-          "pr_auc": 1.0,
-          "roc_auc": 1.0,
-          "fpr_at_95_recall": 0.0
-        },
-        "bots_detected": 1,
-        "bots_total": 1,
-        "median_time_to_detect_s": 60.0
+          "bot_windows_flagged": 0.9848484848484849,
+          "benign_windows_flagged": 0.003137720488466757,
+          "median_time_to_alert_s": 180.0
+        }
       },
       "7": {
         "family": "Sogou",
@@ -78,19 +80,17 @@
           "roc_auc": 0.9589169000933706,
           "fpr_at_95_recall": 0.16993464052287582
         },
-        "host": {
-          "n": 7,
-          "n_pos": 1,
-          "precision": 0.0,
-          "recall": 0.0,
-          "f1": 0.0,
-          "pr_auc": 1.0,
-          "roc_auc": 1.0,
-          "fpr_at_95_recall": 0.0
-        },
-        "bots_detected": 1,
-        "bots_total": 1,
-        "median_time_to_detect_s": 0.0
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 0,
+          "benign_total": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.35714285714285715,
+          "benign_windows_flagged": 0.0,
+          "median_time_to_alert_s": 120.0
+        }
       },
       "8": {
         "family": "Murlo",
@@ -104,19 +104,17 @@
           "roc_auc": 0.9784884332530468,
           "fpr_at_95_recall": 0.1040143019665204
         },
-        "host": {
-          "n": 7,
-          "n_pos": 1,
-          "precision": 0.0,
-          "recall": 0.0,
-          "f1": 0.0,
-          "pr_auc": 1.0,
-          "roc_auc": 1.0,
-          "fpr_at_95_recall": 0.0
-        },
-        "bots_detected": 1,
-        "bots_total": 1,
-        "median_time_to_detect_s": 0.0
+        "alerts": {
+          "bots_alerted": 1,
+          "bots_total": 1,
+          "benign_alerted": 3,
+          "benign_total": 6,
+          "precision": 0.25,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.30511463844797176,
+          "benign_windows_flagged": 0.008523061064966425,
+          "median_time_to_alert_s": 120.0
+        }
       },
       "12": {
         "family": "NSIS.ay",
@@ -130,19 +128,17 @@
           "roc_auc": 0.941958966137314,
           "fpr_at_95_recall": 0.3479212253829322
         },
-        "host": {
-          "n": 9,
-          "n_pos": 3,
-          "precision": 0.0,
-          "recall": 0.0,
-          "f1": 0.0,
-          "pr_auc": 1.0,
-          "roc_auc": 1.0,
-          "fpr_at_95_recall": 0.0
-        },
-        "bots_detected": 3,
-        "bots_total": 3,
-        "median_time_to_detect_s": 60.0
+        "alerts": {
+          "bots_alerted": 3,
+          "bots_total": 3,
+          "benign_alerted": 0,
+          "benign_total": 6,
+          "precision": 1.0,
+          "recall": 1.0,
+          "bot_windows_flagged": 0.275322431060136,
+          "benign_windows_flagged": 0.0,
+          "median_time_to_alert_s": 180.0
+        }
       }
     }
   },

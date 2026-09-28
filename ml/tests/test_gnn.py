@@ -187,19 +187,44 @@ def test_explain_node_reports_raw_values(splits) -> None:  # type: ignore[no-unt
         assert 0.0 <= flow["features"]["periodicity"] <= 1.0
 
 
-def test_compare_renders_reports() -> None:
-    window = {"precision": 0.9, "recall": 0.8, "f1": 0.85, "pr_auc": 0.9, "fpr_at_95_recall": None}
-    scenario = {
-        "family": "Sogou",
-        "bots_detected": 1,
-        "bots_total": 1,
-        "host": {"f1": 1.0},
-        "median_time_to_detect_s": 120.0,
+def _report(model: str, family: str, pr_auc: float) -> dict:  # type: ignore[type-arg]
+    window = {
+        "precision": 0.9,
+        "recall": 0.8,
+        "f1": 0.85,
+        "pr_auc": pr_auc,
+        "fpr_at_95_recall": None,
     }
-    report = {"model": "e_graphsage", "test": {"window": window, "per_scenario": {"7": scenario}}}
-    text = render({"e_graphsage": report})
-    assert "| e_graphsage | 0.900 | 0.800 | 0.850 | 0.900 | n/a |" in text
-    assert "| e_graphsage | Sogou | 1/1 | 1.000 | 2 min |" in text
+    alerts = {
+        "bots_alerted": 1,
+        "bots_total": 1,
+        "benign_alerted": 0,
+        "benign_total": 6,
+        "median_time_to_alert_s": 120.0,
+    }
+    scenario = {"family": family, "window": window, "alerts": alerts}
+    return {
+        "model": model,
+        "test": {"alert_rule": {"k": 3, "n": 5}, "window": window, "per_scenario": {"7": scenario}},
+    }
+
+
+def test_compare_renders_main_split_and_cv() -> None:
+    text = render(
+        {"e_graphsage": _report("e_graphsage", "Sogou", 0.9)},
+        cv={
+            "e_graphsage": {
+                "Sogou": _report("e_graphsage", "Sogou", 0.9),
+                "Menti": _report("e_graphsage", "Menti", 0.7),
+            }
+        },
+    )
+    assert "| E-GraphSAGE | 0.900 | 0.800 | 0.850 | 0.900 | n/a |" in text
+    assert "flagged in 3 of the last 5 windows" in text
+    assert "| E-GraphSAGE | Sogou | 1/1 | 0/6 | 2 min |" in text
+    # two folds: mean/std of PR-AUC (0.9, 0.7) and summed alert counts
+    assert "| E-GraphSAGE | Menti | 0.700 | n/a | 1/1 | 0/6 | 2 min |" in text
+    assert "| E-GraphSAGE | 2 | 0.800 ± 0.141 | 2/2 | 0/12 |" in text
 
 
 def test_tracker_is_noop_without_server() -> None:

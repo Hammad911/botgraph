@@ -21,8 +21,21 @@ import pandas as pd
 from xgboost import XGBClassifier
 
 from botgraph_core import NODE_FEATURES
-from botgraph_ml.config import LabelFile, load_labels, load_params, repo_path
-from botgraph_ml.metrics import best_f1_threshold, evaluate_scores, holdout_report, json_safe
+from botgraph_ml.config import (
+    LabelFile,
+    alert_rule,
+    load_labels,
+    load_params,
+    output_dirs,
+    repo_path,
+)
+from botgraph_ml.metrics import (
+    AlertRule,
+    best_f1_threshold,
+    evaluate_scores,
+    holdout_report,
+    json_safe,
+)
 
 FEATURES = list(NODE_FEATURES)
 
@@ -70,7 +83,7 @@ def score(model: XGBClassifier, df: pd.DataFrame) -> pd.DataFrame:
 
 
 def run(
-    labels: LabelFile, nodes_dir: Path, p: dict[str, Any]
+    labels: LabelFile, nodes_dir: Path, p: dict[str, Any], rule: AlertRule | None = None
 ) -> tuple[XGBClassifier, dict[str, Any]]:
     split = labels.split(p["split"])
     train_df = load_nodes(nodes_dir, split["train"])
@@ -89,7 +102,7 @@ def run(
         "rows": {"train": len(train_df), "val": len(val_df), "test": len(test_df)},
         "best_iteration": int(model.best_iteration),
         "val": evaluate_scores(val_scored, threshold)["window"],
-        "test": holdout_report(test_scored, threshold, labels.families()),
+        "test": holdout_report(test_scored, threshold, labels.families(), rule),
         "feature_importance": dict(
             sorted(
                 zip(FEATURES, model.feature_importances_.astype(float).tolist(), strict=True),
@@ -114,10 +127,11 @@ def main(argv: list[str] | None = None) -> None:
     labels = load_labels(repo_path(params["ctu13"]["labels"]))
     nodes_dir = repo_path(params["data"]["processed_dir"]) / "ctu13" / "nodes"
 
-    model, report = run(labels, nodes_dir, p)
+    model, report = run(labels, nodes_dir, p, alert_rule(params))
 
-    reports_dir = repo_path(params["data"]["reports_dir"]) / "baseline"
-    models_dir = repo_path(params["data"]["models_dir"]) / "baseline"
+    reports_dir, models_dir = output_dirs(
+        params, "baseline", p["split"], params["baseline"]["split"]
+    )
     reports_dir.mkdir(parents=True, exist_ok=True)
     models_dir.mkdir(parents=True, exist_ok=True)
     (reports_dir / "metrics.json").write_text(json.dumps(json_safe(report), indent=2))

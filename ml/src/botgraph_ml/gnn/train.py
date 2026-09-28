@@ -27,9 +27,15 @@ from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 from tqdm import tqdm
 
-from botgraph_ml.config import load_labels, load_params, repo_path
+from botgraph_ml.config import alert_rule, load_labels, load_params, output_dirs, repo_path
 from botgraph_ml.gnn.data import WindowDataset, fit_scaler, labelled_rows, list_windows
-from botgraph_ml.gnn.models import MODEL_KINDS, ModelConfig, NodeClassifier, save_bundle
+from botgraph_ml.gnn.models import (
+    MODEL_KINDS,
+    ModelConfig,
+    NodeClassifier,
+    load_bundle,
+    save_bundle,
+)
 from botgraph_ml.metrics import best_f1_threshold, evaluate_scores, holdout_report, json_safe
 from botgraph_ml.tracking import tracked_run
 
@@ -168,13 +174,21 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--model", choices=MODEL_KINDS, help="overrides gnn.model in params.yaml")
     parser.add_argument("--epochs", type=int, help="override epochs (quick experiments)")
-    parser.add_argument("--split", help="overrides gnn.split in params.yaml")
+    parser.add_argument("--split", help="overrides gnn.split, e.g. lofo:Menti for a CV fold")
+    parser.add_argument("--patience", type=int, help="override early-stopping patience")
+    parser.add_argument(
+        "--eval-only",
+        action="store_true",
+        help="re-evaluate the saved bundle for this model/split instead of training",
+    )
     args = parser.parse_args(argv)
 
     params = load_params()
     cfg: dict[str, Any] = dict(params["gnn"])
     cfg["model"] = args.model or cfg["model"]
     cfg["split"] = args.split or cfg["split"]
+    if args.patience:
+        cfg["patience"] = args.patience
     if args.epochs:
         cfg["epochs"] = args.epochs
     device = resolve_device(cfg["device"])
@@ -183,72 +197,79 @@ def main(argv: list[str] | None = None) -> None:
     split = labels.split(cfg["split"])
     graphs_dir = repo_path(params["data"]["processed_dir"]) / "ctu13" / "graphs"
     windows = {part: list_windows(graphs_dir, split[part]) for part in ("train", "val", "test")}
-
-    scaler, counts = fit_scaler(windows["train"])
-    if counts.pos == 0 or counts.neg == 0:
-        raise SystemExit("training windows need both bot and benign hosts")
-    datasets = {part: WindowDataset(w, scaler) for part, w in windows.items()}
+    reports_dir, models_dir = output_dirs(
+        params, cfg["model"], cfg["split"], params["gnn"]["split"]
+    )
 
     with tracked_run(cfg["model"], tags={"split": cfg["split"]}) as tracker:
         tracker.log_params(cfg)
-        started = time.perf_counter()
-        result = fit(
-            datasets["train"],
-            datasets["val"],
-            cfg,
-            device,
-            pos_weight=counts.neg / counts.pos,
-            on_epoch=lambda epoch, stats: tracker.log_metrics(stats, step=epoch),
-            progress=True,
-        )
-        train_time = time.perf_counter() - started
+        if args.eval_only:
+            model, scaler = load_bundle(models_dir, device=str(device))
+            previous = json.loads((reports_dir / "metrics.json").read_text())
+            training = {k: previous.get(k) for k in ("best_epoch", "train_time_s", "history")}
+            training["train_rows"] = previous.get("rows", {}).get("train")
+        else:
+            scaler, counts = fit_scaler(windows["train"])
+            if counts.pos == 0 or counts.neg == 0:
+                raise SystemExit("training windows need both bot and benign hosts")
+            started = time.perf_counter()
+            result = fit(
+                WindowDataset(windows["train"], scaler),
+                WindowDataset(windows["val"], scaler),
+                cfg,
+                device,
+                pos_weight=counts.neg / counts.pos,
+                on_epoch=lambda epoch, stats: tracker.log_metrics(stats, step=epoch),
+                progress=True,
+            )
+            model = result.model
+            training = {
+                "best_epoch": result.best_epoch,
+                "train_time_s": round(time.perf_counter() - started, 1),
+                "history": result.history,
+                "train_rows": counts.pos + counts.neg,
+            }
+            save_bundle(models_dir, model, scaler)
 
         batch = int(cfg["batch_graphs"])
-        val_scored = predict(result.model, DataLoader(datasets["val"], batch_size=batch), device)  # type: ignore[arg-type]
+        val_ds = WindowDataset(windows["val"], scaler)
+        val_scored = predict(model, DataLoader(val_ds, batch_size=batch), device)  # type: ignore[arg-type]
         threshold = best_f1_threshold(val_scored["y"].to_numpy(), val_scored["score"].to_numpy())
 
         timings: list[float] = []  # batch_size=1 so each timing is one window
-        test_scored = predict(
-            result.model,
-            DataLoader(datasets["test"], batch_size=1),
-            device,
-            timings,  # type: ignore[arg-type]
-        )
+        test_ds = WindowDataset(windows["test"], scaler)
+        test_scored = predict(model, DataLoader(test_ds, batch_size=1), device, timings)  # type: ignore[arg-type]
 
         report = {
             "model": cfg["model"],
             "split": cfg["split"],
             "threshold": threshold,
             "rows": {
-                "train": counts.pos + counts.neg,
+                "train": training["train_rows"],
                 "val": len(val_scored),
                 "test": len(test_scored),
             },
             "windows": {part: len(w) for part, w in windows.items()},
-            "best_epoch": result.best_epoch,
-            "train_time_s": round(train_time, 1),
+            "best_epoch": training["best_epoch"],
+            "train_time_s": training["train_time_s"],
             "latency_ms_per_window": {
                 "mean": 1000 * float(np.mean(timings)),
                 "p95": 1000 * float(np.percentile(timings, 95)),
             },
             "val": evaluate_scores(val_scored, threshold)["window"],
-            "test": holdout_report(test_scored, threshold, labels.families()),
-            "history": result.history,
+            "test": holdout_report(test_scored, threshold, labels.families(), alert_rule(params)),
+            "history": training["history"],
         }
 
-        reports_dir = repo_path(params["data"]["reports_dir"]) / cfg["model"]
-        models_dir = repo_path(params["data"]["models_dir"]) / cfg["model"]
         reports_dir.mkdir(parents=True, exist_ok=True)
         (reports_dir / "metrics.json").write_text(json.dumps(json_safe(report), indent=2))
-        save_bundle(models_dir, result.model, scaler)
-
         tracker.log_metrics({"test": report["test"]["window"], "threshold": threshold})
         tracker.log_artifacts(models_dir)
         tracker.log_artifacts(reports_dir)
 
     w = report["test"]["window"]
     print(
-        f"{cfg['model']} test (window level): precision={w['precision']:.3f} "
+        f"{cfg['model']} [{cfg['split']}] test (window level): precision={w['precision']:.3f} "
         f"recall={w['recall']:.3f} f1={w['f1']:.3f} pr_auc={w['pr_auc']:.3f}"
     )
     print(f"report: {reports_dir / 'metrics.json'}   bundle: {models_dir}")

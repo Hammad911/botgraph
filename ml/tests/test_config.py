@@ -38,3 +38,27 @@ def test_repo_params_load() -> None:
     params = load_params()
     spec = window_spec(params)
     assert spec.size_s >= spec.hop_s
+
+
+def test_lofo_splits_cover_every_family_once() -> None:
+    labels = load_labels(repo_path("ml/labels/ctu13.yaml"))
+    names = labels.lofo_split_names()
+    assert len(names) == len(labels.family_names()) == 7
+
+    tested = []
+    for name in names:
+        split = labels.split(name)
+        parts = [set(split[p]) for p in ("train", "val", "test")]
+        assert not (parts[0] & parts[1] or parts[0] & parts[2] or parts[1] & parts[2])
+        assert set().union(*parts) == set(labels.scenarios)  # nothing dropped
+        fams = {p: {labels.scenarios[s].family for s in split[p]} for p in ("train", "val", "test")}
+        assert len(fams["test"]) == len(fams["val"]) == 1
+        assert not fams["train"] & (fams["test"] | fams["val"])
+        tested += fams["test"]
+    assert sorted(tested) == labels.family_names()
+
+
+def test_unknown_lofo_family() -> None:
+    labels = load_labels(repo_path("ml/labels/ctu13.yaml"))
+    with pytest.raises(KeyError):
+        labels.split("lofo:NotAFamily")

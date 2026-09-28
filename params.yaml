@@ -49,3 +49,8 @@ gnn:
   batch_graphs: 8 # windows per mini-batch
   device: auto # auto | cpu | cuda
   seed: 42
+
+alert:
+  # Alert on a host once it is flagged in >= k of its last n windows (1-minute hop).
+  k: 3
+  n: 5

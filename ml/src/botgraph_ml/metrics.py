@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -52,50 +53,93 @@ def binary_metrics(y_true: np.ndarray, scores: np.ndarray, threshold: float) -> 
     }
 
 
-def host_scores(windows: pd.DataFrame, threshold: float) -> pd.DataFrame:
-    """Aggregate per-window scores into one row per host.
+@dataclass(frozen=True, slots=True)
+class AlertRule:
+    """Alert on a host once it is flagged in at least ``k`` of its last ``n`` windows.
 
-    ``windows`` needs columns: ip, y, score, window_start. A host's score is the mean of
-    its window scores. ``time_to_detect_s`` is the delay between the host's first window
-    and its first window scored at or above ``threshold`` (NaN if never detected).
+    Windows overlap (5-minute windows every minute), so one burst of bot traffic spans
+    several consecutive windows; requiring ``k`` hits filters out one-off false positives.
     """
-    ordered = windows.sort_values("window_start")
-    first_seen = ordered.groupby("ip")["window_start"].min()
-    first_hit = ordered[ordered["score"] >= threshold].groupby("ip")["window_start"].min()
-    hosts = ordered.groupby("ip").agg(
-        y=("y", "max"), score=("score", "mean"), windows=("score", "size")
+
+    k: int = 3
+    n: int = 5
+
+    def __post_init__(self) -> None:
+        if not 1 <= self.k <= self.n:
+            raise ValueError("alert rule needs 1 <= k <= n")
+
+
+def host_alerts(windows: pd.DataFrame, threshold: float, rule: AlertRule) -> pd.DataFrame:
+    """Apply ``rule`` to each host's time-ordered window scores; one row per host.
+
+    ``windows`` needs columns: ip, y, score, window_start. The last ``n`` windows are the
+    host's own last ``n`` appearances. ``time_to_alert_s`` is measured from the host's first
+    window to the window that triggered the alert (NaN if it never alerted).
+    """
+    ordered = windows.sort_values(["ip", "window_start"], kind="stable")
+    flagged = (ordered["score"] >= threshold).astype(int)
+    hits = flagged.groupby(ordered["ip"]).transform(
+        lambda f: f.rolling(rule.n, min_periods=1).sum()
     )
-    hosts["time_to_detect_s"] = (first_hit - first_seen).reindex(hosts.index)
+    alert_starts = ordered.loc[hits >= rule.k].groupby("ip")["window_start"].min()
+
+    hosts = ordered.groupby("ip").agg(
+        y=("y", "max"), first_seen=("window_start", "min"), windows=("score", "size")
+    )
+    hosts["flagged_frac"] = flagged.groupby(ordered["ip"]).mean()
+    hosts["alerted"] = hosts.index.isin(alert_starts.index)
+    hosts["time_to_alert_s"] = (alert_starts - hosts["first_seen"]).reindex(hosts.index)
     return hosts.reset_index()
 
 
-def evaluate_scores(windows: pd.DataFrame, threshold: float) -> dict[str, Any]:
-    """Window-level and host-level metrics plus median time-to-detect for bots."""
-    hosts = host_scores(windows, threshold)
-    bot_ttd = hosts.loc[hosts["y"] == 1, "time_to_detect_s"]
+def alert_metrics(hosts: pd.DataFrame) -> dict[str, Any]:
+    bots, benign = hosts[hosts["y"] == 1], hosts[hosts["y"] == 0]
+    tp = int(bots["alerted"].sum())
+    fp = int(benign["alerted"].sum())
+    ttd = bots["time_to_alert_s"].dropna()
+    return {
+        "bots_alerted": tp,
+        "bots_total": len(bots),
+        "benign_alerted": fp,
+        "benign_total": len(benign),
+        "precision": tp / (tp + fp) if tp + fp else math.nan,
+        "recall": tp / len(bots) if len(bots) else math.nan,
+        "bot_windows_flagged": float(bots["flagged_frac"].mean()) if len(bots) else math.nan,
+        "benign_windows_flagged": float(benign["flagged_frac"].mean()) if len(benign) else math.nan,
+        "median_time_to_alert_s": float(ttd.median()) if len(ttd) else math.nan,
+    }
+
+
+def evaluate_scores(
+    windows: pd.DataFrame, threshold: float, rule: AlertRule | None = None
+) -> dict[str, Any]:
+    """Window-level metrics plus host-level alert outcomes under ``rule``."""
+    rule = rule or AlertRule()
     return {
         "window": binary_metrics(windows["y"].to_numpy(), windows["score"].to_numpy(), threshold),
-        "host": binary_metrics(hosts["y"].to_numpy(), hosts["score"].to_numpy(), threshold),
-        "bots_detected": int(bot_ttd.notna().sum()),
-        "bots_total": len(bot_ttd),
-        "median_time_to_detect_s": float(bot_ttd.median()) if bot_ttd.notna().any() else math.nan,
+        "alerts": alert_metrics(host_alerts(windows, threshold, rule)),
     }
 
 
 def holdout_report(
-    scored: pd.DataFrame, threshold: float, families: Mapping[int, str]
+    scored: pd.DataFrame,
+    threshold: float,
+    families: Mapping[int, str],
+    rule: AlertRule | None = None,
 ) -> dict[str, Any]:
     """Overall window metrics plus a per-scenario (per botnet family) breakdown.
 
     ``scored`` needs columns: scenario, ip, y, score, window_start. Host IPs repeat across
-    CTU-13 scenarios, so hosts are evaluated within each scenario.
+    CTU-13 scenarios, so alerts are evaluated within each scenario.
     """
+    rule = rule or AlertRule()
     per_scenario = {
-        str(sid): {"family": families[int(sid)], **evaluate_scores(part, threshold)}
+        str(sid): {"family": families[int(sid)], **evaluate_scores(part, threshold, rule)}
         for sid, part in scored.groupby("scenario")
     }
     return {
-        "window": evaluate_scores(scored, threshold)["window"],
+        "alert_rule": {"k": rule.k, "n": rule.n},
+        "window": evaluate_scores(scored, threshold, rule)["window"],
         "per_scenario": per_scenario,
     }
 
