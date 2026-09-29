@@ -14,27 +14,31 @@ Only internal hosts are reported: external addresses are context in the graph, n
 from __future__ import annotations
 
 import time
+from collections import OrderedDict
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import torch
+from torch_geometric.data import Data
 
 from botgraph_core import (
     NODE_FEATURES,
     GraphConfig,
     Window,
+    WindowGraph,
     WindowSpec,
     build_window_graph,
-    validate_frame,
 )
 from botgraph_ml.gnn.data import to_data
+from botgraph_ml.gnn.explain import explain_node
 from botgraph_ml.gnn.models import load_bundle, load_metadata
-from botgraph_stream.bus import DETECTIONS, FLOWS, Bus
 from botgraph_stream.windower import StreamingWindower
 
 _INTERNAL = NODE_FEATURES.index("is_internal")
+RECENT_GRAPHS = 3
 
 
 @dataclass
@@ -62,6 +66,8 @@ class Detector:
         self.min_flows = min_flows
         self.allowed_lateness_s = allowed_lateness_s
         self._windowers: dict[str, StreamingWindower] = {}
+        # Recent graphs per sensor, so an alert raised on a window can still be explained.
+        self._recent: dict[str, OrderedDict[str, tuple[WindowGraph, Data]]] = {}
         self.stats = DetectorStats()
 
     def _windower(self, sensor: str) -> StreamingWindower:
@@ -79,6 +85,10 @@ class Detector:
         started = time.perf_counter()
         graph = build_window_graph(window.flows, window.window_id, self.config)
         data = to_data(graph, self.scaler)
+        recent = self._recent.setdefault(sensor, OrderedDict())
+        recent[window.window_id] = (graph, data)
+        while len(recent) > RECENT_GRAPHS:
+            recent.popitem(last=False)
         scores = torch.sigmoid(self.model(data.x, data.edge_index, data.edge_attr)).numpy()
         internal = graph.x[:, _INTERNAL] == 1.0
         hosts = [
@@ -102,32 +112,27 @@ class Detector:
             "hosts": hosts,
         }
 
-    def process(self, sensor: str, flows: pd.DataFrame) -> list[dict[str, Any]]:
+    def explain(
+        self, sensor: str, window_id: str, ip: str, epochs: int = 50, top_k: int = 5
+    ) -> dict[str, Any] | None:
+        """GNNExplainer: the flows and host features behind ``ip``'s score in that window."""
+        cached = self._recent.get(sensor, {}).get(window_id)
+        if cached is None or ip not in cached[0].nodes:
+            return None
+        graph, data = cached
+        return explain_node(self.model, graph, data, graph.nodes.index(ip), epochs, top_k)
+
+    def process(self, sensor: str, flows: pd.DataFrame) -> Iterator[dict[str, Any]]:
+        """Yield one detection per window closed by these flows.
+
+        Lazy on purpose: each detection is handled (alerts, explanations) before the next
+        window is scored, so the window graph an alert needs is still in the recent cache.
+        """
         self.stats.flows += len(flows)
-        return [self.score_window(sensor, w) for w in self._windower(sensor).add(flows)]
+        for window in self._windower(sensor).add(flows):
+            yield self.score_window(sensor, window)
 
-    def flush(self) -> list[dict[str, Any]]:
-        return [
-            self.score_window(sensor, w)
-            for sensor, windower in self._windowers.items()
-            for w in windower.flush()
-        ]
-
-
-def detector_step(bus: Bus, detector: Detector, max_messages: int = 100) -> int:
-    """Consume pending normalised flow batches once; publish a detection per closed window."""
-    messages = bus.poll(FLOWS, max_messages)
-    by_sensor: dict[str, list[dict[str, Any]]] = {}
-    for msg in messages:
-        sensor = str(msg.value.get("sensor_id") or msg.key)
-        by_sensor.setdefault(sensor, []).extend(msg.value.get("flows", []))
-    for sensor, rows in by_sensor.items():
-        frame = validate_frame(pd.DataFrame(rows))
-        for detection in detector.process(sensor, frame):
-            bus.publish(DETECTIONS, sensor, detection)
-    return len(messages)
-
-
-def detector_flush(bus: Bus, detector: Detector) -> None:
-    for detection in detector.flush():
-        bus.publish(DETECTIONS, str(detection["sensor_id"]), detection)
+    def flush(self) -> Iterator[dict[str, Any]]:
+        for sensor, windower in self._windowers.items():
+            for window in windower.flush():
+                yield self.score_window(sensor, window)

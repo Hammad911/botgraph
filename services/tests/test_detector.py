@@ -10,9 +10,11 @@ from stream_fixtures import INTERNAL, synthetic_flows
 from botgraph_core import GraphConfig, WindowSpec, build_window_graph, sliding_windows
 from botgraph_ml.gnn.data import to_data
 from botgraph_ml.gnn.models import load_bundle
+from botgraph_stream.alerts import AlertEngine
 from botgraph_stream.bus import DETECTIONS, DLQ, FLOWS, FLOWS_RAW, LocalBus
-from botgraph_stream.detector import Detector, detector_flush, detector_step
+from botgraph_stream.detector import Detector
 from botgraph_stream.ingest import IngestStats, ingest_step
+from botgraph_stream.service import DetectorService
 
 SPEC = WindowSpec(size_s=300, hop_s=60)
 CONFIG = GraphConfig(internal_nets=INTERNAL)
@@ -69,9 +71,10 @@ def test_pipeline_ingest_to_detections_with_dlq(bundle_dir) -> None:  # type: ig
     for i in range(0, len(records), 50):
         bus.publish(FLOWS_RAW, "lab", {"sensor_id": "lab", "flows": records[i : i + 50]})
     det = Detector(bundle_dir, CONFIG, SPEC, min_flows=1, allowed_lateness_s=0.0)
-    while ingest_step(bus, stats) or detector_step(bus, det):
+    service = DetectorService(bus, det, AlertEngine(det.threshold), explain_epochs=0)
+    while ingest_step(bus, stats) or service.step():
         pass
-    detector_flush(bus, det)
+    service.flush()
 
     assert (stats.flows_ok, stats.flows_rejected) == (len(flows), 2)
     assert sum(len(m.value["errors"]) for m in bus.poll(DLQ)) == 2
