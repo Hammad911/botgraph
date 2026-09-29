@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import torch
 from torch_geometric.data import Data
@@ -47,6 +48,30 @@ class DetectorStats:
     windows: int = 0
     host_scores: int = 0
     latencies_ms: list[float] = field(default_factory=list)
+
+
+def ego_graph(graph: WindowGraph, ip: str, hops: int) -> tuple[WindowGraph, int]:
+    """Induced subgraph of every host within ``hops`` of ``ip``, ignoring edge direction
+    (to_data adds reverse edges, so messages flow both ways). Node features are copied from
+    the full window, not recomputed, so the host's score is unchanged."""
+    src, dst = graph.edge_index
+    keep = np.zeros(graph.num_nodes, dtype=bool)
+    keep[graph.nodes.index(ip)] = True
+    for _ in range(hops):
+        reached = keep[src] | keep[dst]
+        keep[src[reached]] = True
+        keep[dst[reached]] = True
+    new_index = np.cumsum(keep) - 1
+    edges = keep[src] & keep[dst]
+    sub = WindowGraph(
+        window_id=graph.window_id,
+        nodes=[n for n, k in zip(graph.nodes, keep, strict=True) if k],
+        x=graph.x[keep],
+        edge_index=np.vstack([new_index[src[edges]], new_index[dst[edges]]]).astype(np.int64),
+        edge_attr=graph.edge_attr[edges],
+        y=graph.y[keep],
+    )
+    return sub, int(new_index[graph.nodes.index(ip)])
 
 
 class Detector:
@@ -119,8 +144,10 @@ class Detector:
         cached = self._recent.get(sensor, {}).get(window_id)
         if cached is None or ip not in cached[0].nodes:
             return None
-        graph, data = cached
-        return explain_node(self.model, graph, data, graph.nodes.index(ip), epochs, top_k)
+        # An L-layer GNN's output for a host depends only on its L-hop neighbourhood, so
+        # explaining on that ego graph is exact and far cheaper than on the whole window.
+        ego, node = ego_graph(cached[0], ip, hops=self.model.cfg.layers)
+        return explain_node(self.model, ego, to_data(ego, self.scaler), node, epochs, top_k)
 
     def process(self, sensor: str, flows: pd.DataFrame) -> Iterator[dict[str, Any]]:
         """Yield one detection per window closed by these flows.

@@ -12,7 +12,7 @@ from botgraph_ml.gnn.data import to_data
 from botgraph_ml.gnn.models import load_bundle
 from botgraph_stream.alerts import AlertEngine
 from botgraph_stream.bus import DETECTIONS, DLQ, FLOWS, FLOWS_RAW, LocalBus
-from botgraph_stream.detector import Detector
+from botgraph_stream.detector import Detector, ego_graph
 from botgraph_stream.ingest import IngestStats, ingest_step
 from botgraph_stream.service import DetectorService
 
@@ -83,3 +83,19 @@ def test_pipeline_ingest_to_detections_with_dlq(bundle_dir) -> None:  # type: ig
     assert bus.pending(FLOWS) == 0
     beacon = [h for d in detections for h in d.value["hosts"] if h["ip"] == "10.0.0.66"]
     assert beacon and all(0.0 <= h["score"] <= 1.0 for h in beacon)
+
+
+def test_ego_graph_keeps_the_exact_score(bundle_dir) -> None:  # type: ignore[no-untyped-def]
+    flows = synthetic_flows(np.random.default_rng(5), minutes=6)
+    graph = build_window_graph(flows, "0-300", CONFIG)
+    model, scaler = load_bundle(bundle_dir)
+    full = to_data(graph, scaler)
+    for ip in ("10.0.0.66", "10.0.0.1"):
+        ego, node = ego_graph(graph, ip, hops=model.cfg.layers)
+        sub = to_data(ego, scaler)
+        with torch.no_grad():
+            s_full = model(full.x, full.edge_index, full.edge_attr)[graph.nodes.index(ip)]
+            s_ego = model(sub.x, sub.edge_index, sub.edge_attr)[node]
+        assert ego.nodes[node] == ip
+        assert ego.num_nodes < graph.num_nodes
+        assert float(s_ego) == pytest.approx(float(s_full), abs=1e-5)

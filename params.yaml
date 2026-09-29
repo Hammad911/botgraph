@@ -74,3 +74,16 @@ alert:
   # the old 3 of 5 raised false alerts on 22/78 normal hosts vs 5/78 for GATv2.
   k: 12
   n: 15
+
+stream:
+  # Live pipeline (python -m botgraph_stream / `botgraph run`).
+  model: gatv2
+  min_flows: 1 # quiet networks and lone beacons can have < 10 flows per window
+  allowed_lateness_s: 30
+  learning_minutes: 60 # per new sensor; 0 on the model's home network (CTU-13)
+  baseline_quantile: 0.95
+  explain_epochs: 50
+  batch_flows: 500 # flows per bus message
+  levels:
+    warning: { k: 3, n: 5 }
+    alert: { k: 12, n: 15 }

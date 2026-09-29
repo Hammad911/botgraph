@@ -41,6 +41,7 @@ ORDER = ["warning", "alert"]  # ascending severity
 @dataclass
 class HostState:
     flags: deque[int]
+    first_seen: float
     level: str | None = None
     clean_streak: int = 0
 
@@ -125,7 +126,10 @@ class AlertEngine:
         detection: dict[str, Any],
     ) -> list[dict[str, Any]]:
         ip, score = str(host["ip"]), float(host["score"])
-        hs = state.hosts.setdefault(ip, HostState(flags=deque(maxlen=self.history)))
+        start = float(detection["window_start"])
+        hs = state.hosts.setdefault(
+            ip, HostState(flags=deque(maxlen=self.history), first_seen=start)
+        )
         flagged = int(score >= threshold)
         hs.flags.append(flagged)
         hs.clean_streak = 0 if flagged else hs.clean_streak + 1
@@ -134,7 +138,8 @@ class AlertEngine:
             "sensor_id": sensor,
             "ip": ip,
             "window_id": detection["window_id"],
-            "window_start": float(detection["window_start"]),
+            "window_start": start,
+            "first_seen": hs.first_seen,
             "score": score,
             "threshold": threshold,
         }

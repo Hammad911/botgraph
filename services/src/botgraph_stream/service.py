@@ -16,7 +16,7 @@ from typing import Any
 
 import pandas as pd
 
-from botgraph_core import validate_frame
+from botgraph_core import FLOW_COLUMNS, FLOW_DTYPES
 from botgraph_stream.alerts import AlertEngine
 from botgraph_stream.bus import ALERTS, DETECTIONS, FLOWS, Bus
 from botgraph_stream.detector import Detector
@@ -69,7 +69,9 @@ class DetectorService:
             sensor = str(msg.value.get("sensor_id") or msg.key)
             by_sensor.setdefault(sensor, []).extend(msg.value.get("flows", []))
         for sensor, rows in by_sensor.items():
-            for detection in self.detector.process(sensor, validate_frame(pd.DataFrame(rows))):
+            # Rows on flows.normalized were validated by ingest; only restore column dtypes.
+            frame = pd.DataFrame(rows, columns=FLOW_COLUMNS).astype(FLOW_DTYPES)
+            for detection in self.detector.process(sensor, frame):
                 self._handle(detection)
         return len(messages)
 

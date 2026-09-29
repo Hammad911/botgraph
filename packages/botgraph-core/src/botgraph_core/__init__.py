@@ -13,12 +13,20 @@ from botgraph_core.graph import (
     WindowGraph,
     build_window_graph,
 )
-from botgraph_core.schema import FLOW_COLUMNS, FlowRecord, Label, Proto, validate_frame
+from botgraph_core.schema import (
+    FLOW_COLUMNS,
+    FLOW_DTYPES,
+    FlowRecord,
+    Label,
+    Proto,
+    validate_frame,
+)
 from botgraph_core.windowing import Window, WindowSpec, sliding_windows
 
 __all__ = [
     "EDGE_FEATURES",
     "FLOW_COLUMNS",
+    "FLOW_DTYPES",
     "NODE_FEATURES",
     "FlowRecord",
     "GraphConfig",
