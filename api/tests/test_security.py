@@ -33,6 +33,9 @@ def _login(client: TestClient, user: str, password: str | None = None) -> dict[s
 
 
 def test_account_locks_after_repeated_failures(client: TestClient, store: Store) -> None:
+    from prometheus_client import REGISTRY
+
+    lockouts = REGISTRY.get_sample_value("botgraph_api_login_lockouts_total") or 0
     for _ in range(MAX_FAILED_LOGINS):
         r = client.post("/api/auth/login", json={"username": "ana", "password": "wrong-one"})
         assert r.status_code == 401
@@ -40,11 +43,14 @@ def test_account_locks_after_repeated_failures(client: TestClient, store: Store)
     r = client.post("/api/auth/login", json={"username": "ana", "password": "ana-password"})
     assert r.status_code == 401 and r.json()["detail"] == "invalid username or password"
     assert store.login("ana", "ana-password") == (None, "locked")
+    # One lockout, however many attempts hit the locked account afterwards.
+    assert REGISTRY.get_sample_value("botgraph_api_login_lockouts_total") == lockouts + 1
 
     store.set_password("ana", "a-brand-new-password")  # an admin reset unlocks the account
     _login(client, "ana", "a-brand-new-password")
     outcomes = [e.detail["outcome"] for e in store.audit_events(action="login_failed")]
-    assert outcomes.count("locked") >= 2 and "invalid" in outcomes
+    assert outcomes.count("lockout") == 1 and outcomes.count("locked") == 1
+    assert outcomes.count("invalid") == MAX_FAILED_LOGINS - 1
 
 
 def test_unknown_users_and_disabled_accounts_look_like_wrong_passwords(

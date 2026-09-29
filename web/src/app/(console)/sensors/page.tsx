@@ -65,8 +65,8 @@ export default function SensorsPage() {
                 <th className="pb-2 font-normal">Mode</th>
                 <th className="pb-2 text-right font-normal">Threshold</th>
                 <th className="pb-2 text-right font-normal">Model threshold</th>
-                <th className="pb-2 font-normal">Last window</th>
-                <th className="pb-2 font-normal">Drift since calibration</th>
+                <th className="pb-2 pl-6 font-normal">Last window</th>
+                <th className="pb-2 pl-4 font-normal">Drift since calibration</th>
                 <th className="pb-2 font-normal">Vs training data</th>
                 <th className="pb-2" />
               </tr>
@@ -88,8 +88,8 @@ export default function SensorsPage() {
                   </td>
                   <td className="tabular py-2 text-right">{s.threshold?.toFixed(4) ?? "–"}</td>
                   <td className="tabular py-2 text-right text-ink-2">{s.model_threshold?.toFixed(4) ?? "–"}</td>
-                  <td className="tabular py-2 text-xs text-ink-2">{eventTime(s.last_window_start)}</td>
-                  <td className="py-2">
+                  <td className="tabular py-2 pl-6 text-xs text-ink-2">{eventTime(s.last_window_start)}</td>
+                  <td className="py-2 pl-4">
                     <DriftCell versus={bySensor.get(s.id)?.baseline} label="Drift since calibration" />
                   </td>
                   <td className="py-2">

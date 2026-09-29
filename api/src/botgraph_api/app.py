@@ -171,7 +171,7 @@ def create_app(store: Store, secret: str, poll_interval_s: float = 2.0) -> FastA
         user, outcome = store.login(body.username, body.password)
         if user is None:
             LOGINS.labels("failure").inc()
-            if outcome == "locked":
+            if outcome == "lockout":
                 LOGIN_LOCKOUTS.inc()
             log.warning(
                 "login failed",

@@ -582,7 +582,8 @@ class Store:
             return user
 
     def login(self, username: str, password: str) -> tuple[User | None, str]:
-        """Check a password; returns (user, "ok") or (None, "invalid" | "locked" | "disabled").
+        """Check a password; returns (user, "ok") or (None, outcome): "invalid", "lockout" (this
+        attempt locked the account), "locked" (already locked) or "disabled".
 
         After ``MAX_FAILED_LOGINS`` wrong passwords in a row the account is locked for
         ``LOCKOUT``. Every outcome costs one scrypt verification, so response times do not
@@ -601,7 +602,7 @@ class Store:
                 user.failed_logins += 1
                 if user.failed_logins >= MAX_FAILED_LOGINS:
                     user.failed_logins, user.locked_until = 0, now + LOCKOUT
-                    return None, "locked"
+                    return None, "lockout"
                 return None, "invalid"
             user.failed_logins, user.locked_until = 0, None
             return user, "ok"
