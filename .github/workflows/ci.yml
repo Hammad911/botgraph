@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv python install  # version from .python-version
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
       - name: Python (pip-audit on uv.lock)
         run: |
           uv export --frozen --no-dev --no-emit-workspace --no-hashes --format requirements-txt -o req.txt
@@ -129,7 +129,7 @@ jobs:
             --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092 \
             --advertise-kafka-addr internal://localhost:9092,external://localhost:19092
           timeout 90 docker exec redpanda rpk cluster health --watch --exit-when-healthy
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv python install
@@ -149,7 +149,7 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv python install
