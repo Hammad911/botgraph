@@ -4,17 +4,18 @@ version = "0.1.0"
 description = "Botnet detection with graph neural networks over network flow graphs"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["botgraph-core", "botgraph-ml"]
+dependencies = ["botgraph-core", "botgraph-ml", "botgraph-stream"]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["packages/*", "ml"]
+members = ["packages/*", "ml", "services"]
 
 [tool.uv.sources]
 botgraph-core = { workspace = true }
 botgraph-ml = { workspace = true }
+botgraph-stream = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -40,7 +41,7 @@ select = ["E", "F", "I", "B", "UP", "SIM", "N", "RUF"]
 "**/tests/**" = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["botgraph_core", "botgraph_ml"]
+known-first-party = ["botgraph_core", "botgraph_ml", "botgraph_stream"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -48,8 +49,11 @@ strict = true
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-testpaths = ["packages", "ml"]
+testpaths = ["packages", "ml", "services"]
 addopts = "-q --strict-markers"
+markers = [
+    "kafka: needs a reachable Kafka/Redpanda broker (BOTGRAPH_KAFKA_BOOTSTRAP)",
+]
 filterwarnings = [
     # Emitted by torch_geometric on import; not actionable here.
     "ignore:`torch.jit.script` is deprecated:FutureWarning",

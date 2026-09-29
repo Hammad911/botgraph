@@ -35,6 +35,7 @@ from botgraph_ml.gnn.models import (
     NodeClassifier,
     load_bundle,
     save_bundle,
+    write_metadata,
 )
 from botgraph_ml.metrics import (
     best_f1_threshold,
@@ -248,6 +249,7 @@ def main(argv: list[str] | None = None) -> None:
         val_ds = WindowDataset(windows["val"], scaler)
         val_scored = predict(model, DataLoader(val_ds, batch_size=batch), device)  # type: ignore[arg-type]
         threshold = best_f1_threshold(val_scored["y"].to_numpy(), val_scored["score"].to_numpy())
+        write_metadata(models_dir, threshold, cfg["split"], model_kind=cfg["model"])
 
         timings: list[float] = []  # batch_size=1 so each timing is one window
         test_ds = WindowDataset(windows["test"], scaler)

@@ -11,15 +11,18 @@ tabular baseline sees and only has to learn what the neighbourhood adds.
 from __future__ import annotations
 
 import json
+import subprocess
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import torch
 import torch.nn.functional as F  # noqa: N812
 from torch import Tensor, nn
 from torch_geometric.nn import GATv2Conv, MessagePassing, SAGEConv
 
+from botgraph_core import EDGE_FEATURES, NODE_FEATURES
 from botgraph_ml.gnn.data import EDGE_DIM, NODE_DIM, Scaler
 
 ModelKind = Literal["graphsage", "e_graphsage", "gatv2"]
@@ -114,3 +117,40 @@ def load_bundle(directory: Path, device: str = "cpu") -> tuple[NodeClassifier, S
     model.load_state_dict(state)
     model.eval()
     return model.to(device), Scaler.load(directory / "scaler.json")
+
+
+def write_metadata(directory: Path, threshold: float, split: str, **extra: Any) -> None:
+    """Record what a deployed model needs besides its weights: the decision threshold chosen
+    on validation data and the feature layout it was trained with."""
+    try:
+        sha = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        sha = "unknown"
+    metadata = {
+        "threshold": threshold,
+        "split": split,
+        "node_features": list(NODE_FEATURES),
+        "edge_features": list(EDGE_FEATURES),
+        "git_sha": sha,
+        "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        **extra,
+    }
+    (directory / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+
+def load_metadata(directory: Path) -> dict[str, Any]:
+    """Bundle metadata; refuses a bundle built for a different feature layout."""
+    path = directory / "metadata.json"
+    if not path.exists():
+        raise FileNotFoundError(
+            f"{path} missing; re-run `python -m botgraph_ml.gnn.train --eval-only` for this model"
+        )
+    metadata: dict[str, Any] = json.loads(path.read_text())
+    if (
+        tuple(metadata["node_features"]) != NODE_FEATURES
+        or tuple(metadata["edge_features"]) != EDGE_FEATURES
+    ):
+        raise ValueError(f"{directory} was trained on a different feature layout; retrain it")
+    return metadata
