@@ -1,5 +1,8 @@
-# Local development infrastructure. Application services are added in later phases.
-#   docker compose -f deploy/compose/docker-compose.yml up -d
+# Local infrastructure, plus the BotGraph pipeline services behind the "pipeline" profile.
+#   docker compose -f deploy/compose/docker-compose.yml up -d                      # infra only
+#   docker compose -f deploy/compose/docker-compose.yml --profile pipeline up -d   # + ingest, detector
+#   docker compose -f deploy/compose/docker-compose.yml --profile pipeline run --rm replay \
+#       replay --replay ctu13:6 --speed 60
 name: botgraph
 
 services:
@@ -62,6 +65,45 @@ services:
       --artifacts-destination /mlflow/artifacts --serve-artifacts
     ports: ["5000:5000"]
     volumes: [mlflow:/mlflow]
+
+  # --------------------------------------------------------------- pipeline (profile)
+  ingest:
+    profiles: [pipeline]
+    build: { context: ../.., dockerfile: deploy/Dockerfile }
+    command: [ingest]
+    environment:
+      BOTGRAPH_KAFKA_BOOTSTRAP: redpanda:9092
+    depends_on:
+      redpanda: { condition: service_healthy }
+    restart: unless-stopped
+
+  detector:
+    profiles: [pipeline]
+    build: { context: ../.., dockerfile: deploy/Dockerfile }
+    command:
+      - detect
+      - --internal-nets
+      - ${BOTGRAPH_INTERNAL_NETS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+    environment:
+      BOTGRAPH_KAFKA_BOOTSTRAP: redpanda:9092
+      BOTGRAPH_DB_URL: postgresql+psycopg://${POSTGRES_USER:-botgraph}:${POSTGRES_PASSWORD:-botgraph}@postgres:5432/${POSTGRES_DB:-botgraph}
+    volumes:
+      - ../../ml/models:/app/ml/models:ro
+    depends_on:
+      redpanda: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  replay:
+    # one-off: docker compose --profile pipeline run --rm replay replay --replay ctu13:6
+    profiles: [pipeline]
+    build: { context: ../.., dockerfile: deploy/Dockerfile }
+    environment:
+      BOTGRAPH_KAFKA_BOOTSTRAP: redpanda:9092
+    volumes:
+      - ../../ml/data/processed:/app/ml/data/processed:ro
+    depends_on:
+      redpanda: { condition: service_healthy }
 
 volumes:
   redpanda:

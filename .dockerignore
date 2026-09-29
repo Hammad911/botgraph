@@ -1,0 +1,10 @@
+.git
+.venv
+**/__pycache__
+**/.pytest_cache
+data
+mlruns
+ml/data
+ml/models
+ml/reports/logs
+**/*.parquet

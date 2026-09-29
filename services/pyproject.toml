@@ -8,6 +8,7 @@ dependencies = [
     "botgraph-ml",
     "confluent-kafka>=2.5",
     "prometheus-client>=0.20",
+    "psycopg[binary]>=3.2",
     "rich>=13.7",
     "sqlalchemy>=2.0",
 ]

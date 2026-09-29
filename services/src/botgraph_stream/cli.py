@@ -1,10 +1,16 @@
 """``botgraph``: run and inspect the live pipeline.
 
-botgraph run --replay ctu13:6              # all-in-one demo on a held-out botnet family
-botgraph run --replay iot23:CTU-IoT-Malware-Capture-34-1 --speed 600
-botgraph alerts [--open]                   # alerts in the store
-botgraph status                            # sensors, thresholds, counts
-botgraph recalibrate --sensor <id>         # back to learning mode on next start
+All-in-one (in-process bus, no broker needed):
+    botgraph run --replay ctu13:6              # demo on a held-out botnet family
+    botgraph run --replay iot23:CTU-IoT-Malware-Capture-34-1 --speed 600
+
+As separate services over Kafka/Redpanda (BOTGRAPH_KAFKA_BOOTSTRAP, default localhost:19092):
+    botgraph ingest
+    botgraph detect --internal-nets 147.32.0.0/16 --learning-minutes 0
+    botgraph replay --replay ctu13:6 --speed 60
+
+Inspect:
+    botgraph alerts [--open] | botgraph status | botgraph recalibrate --sensor <id>
 """
 
 from __future__ import annotations
@@ -12,9 +18,12 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
+import signal
 import statistics
 import time
 from collections import deque
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -27,7 +36,7 @@ from botgraph_core import GraphConfig, Label
 from botgraph_ml.config import load_params, repo_path, window_spec
 from botgraph_ml.metrics import AlertRule
 from botgraph_stream.alerts import AlertEngine
-from botgraph_stream.bus import ALERTS, DETECTIONS, DLQ, FLOWS, FLOWS_RAW, LocalBus
+from botgraph_stream.bus import ALERTS, DETECTIONS, DLQ, FLOWS, FLOWS_RAW, Bus, KafkaBus, LocalBus
 from botgraph_stream.detector import Detector
 from botgraph_stream.ingest import IngestStats, ingest_step
 from botgraph_stream.replay import Replayer, ReplaySource, load_source
@@ -153,6 +162,38 @@ def _summary(
     }
 
 
+def build_service(
+    params: dict[str, Any],
+    bus: Bus,
+    store: Store,
+    internal_nets: tuple[str, ...],
+    learning_minutes: float,
+    model: str | None = None,
+    explain_epochs: int | None = None,
+) -> DetectorService:
+    """Detector + alert engine + store, configured from params.yaml's ``stream`` section."""
+    sp = params["stream"]
+    detector = Detector(
+        repo_path(params["data"]["models_dir"]) / (model or sp["model"]),
+        GraphConfig(
+            internal_nets=internal_nets,
+            min_flows_for_periodicity=int(params["graph"]["min_flows_for_periodicity"]),
+        ),
+        window_spec(params),
+        min_flows=int(sp["min_flows"]),
+        allowed_lateness_s=float(sp["allowed_lateness_s"]),
+    )
+    engine = AlertEngine(
+        detector.threshold,
+        {name: AlertRule(**rule) for name, rule in sp["levels"].items()},
+        learning_s=60.0 * learning_minutes,
+        baseline_quantile=float(sp["baseline_quantile"]),
+        thresholds=store.thresholds(),
+    )
+    epochs = sp["explain_epochs"] if explain_epochs is None else explain_epochs
+    return DetectorService(bus, detector, engine, store, explain_epochs=int(epochs))
+
+
 def cmd_run(args: argparse.Namespace) -> None:
     params = load_params()
     sp = params["stream"]
@@ -167,25 +208,9 @@ def cmd_run(args: argparse.Namespace) -> None:
         Path(db_url.removeprefix("sqlite:///")).unlink(missing_ok=True)
     store = Store(db_url)
     bus = LocalBus()
-    detector = Detector(
-        repo_path(params["data"]["models_dir"]) / (args.model or sp["model"]),
-        GraphConfig(
-            internal_nets=source.internal_nets,
-            min_flows_for_periodicity=int(params["graph"]["min_flows_for_periodicity"]),
-        ),
-        window_spec(params),
-        min_flows=int(sp["min_flows"]),
-        allowed_lateness_s=float(sp["allowed_lateness_s"]),
+    service = build_service(
+        params, bus, store, source.internal_nets, learning_min, args.model, args.explain_epochs
     )
-    engine = AlertEngine(
-        detector.threshold,
-        {name: AlertRule(**rule) for name, rule in sp["levels"].items()},
-        learning_s=60.0 * learning_min,
-        baseline_quantile=float(sp["baseline_quantile"]),
-        thresholds=store.thresholds(),
-    )
-    epochs = sp["explain_epochs"] if args.explain_epochs is None else args.explain_epochs
-    service = DetectorService(bus, detector, engine, store, explain_epochs=int(epochs))
     replayer = Replayer(bus, source, speed=args.speed, batch_flows=int(sp["batch_flows"]))
     view, ingest, events = RunView(source, replayer, service), IngestStats(), []
 
@@ -221,6 +246,83 @@ def cmd_run(args: argparse.Namespace) -> None:
     _print_summary(summary)
     if args.summary_json:
         Path(args.summary_json).write_text(json.dumps(summary, indent=2))
+
+
+# --------------------------------------------------------------------------- kafka services
+
+
+def _kafka(args: argparse.Namespace, group: str) -> KafkaBus:
+    bootstrap = args.bootstrap or os.environ.get("BOTGRAPH_KAFKA_BOOTSTRAP", "localhost:19092")
+    bus = KafkaBus(bootstrap, group_id=group, prefix=args.topic_prefix)
+    bus.ensure_topics()
+    return bus
+
+
+def serve(step: Callable[[], int], idle_exit_s: float | None = None) -> None:
+    """Run ``step`` until SIGINT/SIGTERM, or until nothing arrived for ``idle_exit_s``."""
+    stop = False
+
+    def _stop(*_: object) -> None:
+        nonlocal stop
+        stop = True
+
+    signal.signal(signal.SIGINT, _stop)
+    signal.signal(signal.SIGTERM, _stop)
+    last_work = time.monotonic()
+    while not stop:
+        if step():
+            last_work = time.monotonic()
+        elif idle_exit_s is not None and time.monotonic() - last_work >= idle_exit_s:
+            break
+
+
+def cmd_replay(args: argparse.Namespace) -> None:
+    params = load_params()
+    source = load_source(args.replay, params)
+    bus = _kafka(args, "replay")
+    replayer = Replayer(
+        bus, source, speed=args.speed, batch_flows=int(params["stream"]["batch_flows"])
+    )
+    while not replayer.done:
+        replayer.step()
+    bus.close()
+    console.print(f"replayed {replayer.published:,} flows as sensor {source.sensor_id}")
+
+
+def cmd_ingest(args: argparse.Namespace) -> None:
+    bus, stats = _kafka(args, "ingest"), IngestStats()
+    console.print(f"ingest: {bus.bootstrap} {args.topic_prefix}{FLOWS_RAW} -> {FLOWS}")
+    serve(lambda: ingest_step(bus, stats, timeout=1.0), args.idle_exit)
+    bus.close()
+    console.print(f"ingest stopped: {stats}")
+
+
+def cmd_detect(args: argparse.Namespace) -> None:
+    params = load_params()
+    bus = _kafka(args, "detector")
+    nets = tuple(n.strip() for n in args.internal_nets.split(","))
+    learning = (
+        params["stream"]["learning_minutes"]
+        if args.learning_minutes is None
+        else args.learning_minutes
+    )
+    service = build_service(
+        params,
+        bus,
+        Store(args.db or default_db_url()),
+        nets,
+        learning,
+        args.model,
+        args.explain_epochs,
+    )
+    console.print(f"detector: {bus.bootstrap} {args.topic_prefix}{FLOWS} -> {DETECTIONS}, {ALERTS}")
+    serve(lambda: service.step(timeout=1.0), args.idle_exit)
+    if args.idle_exit is not None:
+        service.flush()  # finite input (tests, batch replays): close the remaining windows
+    bus.close()
+    console.print(
+        f"detector stopped: {service.detector.stats.windows} windows, {service.stats.events}"
+    )
 
 
 def _print_summary(s: dict[str, Any]) -> None:
@@ -323,6 +425,36 @@ def main(argv: list[str] | None = None) -> None:
     recal = sub.add_parser("recalibrate", help="put a sensor back into learning mode")
     recal.add_argument("--sensor", required=True)
     recal.set_defaults(func=cmd_recalibrate)
+
+    def kafka_args(p: argparse.ArgumentParser) -> argparse.ArgumentParser:
+        p.add_argument("--bootstrap", help="Kafka bootstrap servers (env BOTGRAPH_KAFKA_BOOTSTRAP)")
+        p.add_argument("--topic-prefix", default="", help="namespace for topic names")
+        return p
+
+    rep = kafka_args(sub.add_parser("replay", help="publish a recorded capture to flows.raw"))
+    rep.add_argument("--replay", required=True, help="ctu13:<scenario> or iot23:<capture>")
+    rep.add_argument(
+        "--speed", type=float, default=0.0, help="x real time (0 = as fast as possible)"
+    )
+    rep.set_defaults(func=cmd_replay)
+
+    ing = kafka_args(sub.add_parser("ingest", help="validate flows.raw -> flows.normalized"))
+    ing.add_argument("--idle-exit", type=float, help="stop after this many idle seconds")
+    ing.set_defaults(func=cmd_ingest)
+
+    det = kafka_args(sub.add_parser("detect", help="windows, GNN scores and alerts"))
+    det.add_argument(
+        "--internal-nets",
+        default="10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
+        help="comma-separated CIDRs of the monitored network",
+    )
+    det.add_argument("--model", help="bundle name under ml/models (default: stream.model)")
+    det.add_argument("--learning-minutes", type=float, help="default: stream.learning_minutes")
+    det.add_argument("--explain-epochs", type=int, help="GNNExplainer epochs per alert (0 = off)")
+    det.add_argument(
+        "--idle-exit", type=float, help="stop (and flush) after this many idle seconds"
+    )
+    det.set_defaults(func=cmd_detect)
 
     args = parser.parse_args(argv)
     args.func(args)

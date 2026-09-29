@@ -40,9 +40,9 @@ def validate_batch(
     return good, bad
 
 
-def ingest_step(bus: Bus, stats: IngestStats, max_messages: int = 100) -> int:
+def ingest_step(bus: Bus, stats: IngestStats, max_messages: int = 100, timeout: float = 0.0) -> int:
     """Process pending raw batches once; returns the number of messages handled."""
-    messages = bus.poll(FLOWS_RAW, max_messages)
+    messages = bus.poll(FLOWS_RAW, max_messages, timeout)
     for msg in messages:
         sensor = str(msg.value.get("sensor_id") or msg.key)
         flows = msg.value.get("flows", [])

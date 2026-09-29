@@ -62,8 +62,8 @@ class DetectorService:
                 self.store.record_event(event)
             self.bus.publish(ALERTS, sensor, event)
 
-    def step(self, max_messages: int = 100) -> int:
-        messages = self.bus.poll(FLOWS, max_messages)
+    def step(self, max_messages: int = 100, timeout: float = 0.0) -> int:
+        messages = self.bus.poll(FLOWS, max_messages, timeout)
         by_sensor: dict[str, list[dict[str, Any]]] = {}
         for msg in messages:
             sensor = str(msg.value.get("sensor_id") or msg.key)
