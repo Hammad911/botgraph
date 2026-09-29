@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import tarfile
+import time
 from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
@@ -24,8 +25,27 @@ from botgraph_ml.config import load_params, repo_path
 CHUNK = 1 << 20
 
 
-def download(url: str, dest: Path) -> Path:
-    """Stream ``url`` to ``dest``, resuming a previous partial download if present."""
+def download(url: str, dest: Path, attempts: int = 8) -> Path:
+    """Stream ``url`` to ``dest``, resuming from any partial download.
+
+    Network errors (timeouts, dropped connections) are retried with backoff, each attempt
+    resuming from the bytes already on disk, so a flaky server never restarts from zero.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            return _download_once(url, dest)
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            if attempt == attempts:
+                raise
+            wait = min(60, 5 * 2 ** (attempt - 1))
+            tqdm.write(
+                f"{dest.name}: {type(exc).__name__}, retry {attempt}/{attempts - 1} in {wait}s"
+            )
+            time.sleep(wait)
+    raise AssertionError("unreachable")
+
+
+def _download_once(url: str, dest: Path) -> Path:
     if dest.exists():
         return dest
     dest.parent.mkdir(parents=True, exist_ok=True)

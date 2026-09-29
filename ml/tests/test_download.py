@@ -4,6 +4,8 @@ import io
 import tarfile
 from pathlib import Path, PurePosixPath
 
+import pytest
+
 from botgraph_ml.download import ctu13_target, extract_matching, iot23_target
 
 
@@ -50,3 +52,37 @@ def test_iot23_target() -> None:
     )
     assert iot23_target(path) == Path("CTU-IoT-Malware-Capture-34-1/conn.log.labeled")
     assert iot23_target(PurePosixPath("x/bro/dns.log")) is None
+
+
+def test_download_retries_network_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import requests
+
+    from botgraph_ml import download as dl
+
+    calls = {"n": 0}
+
+    def flaky(url: str, dest: Path) -> Path:
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise requests.ConnectionError("Read timed out.")
+        dest.write_text("ok")
+        return dest
+
+    monkeypatch.setattr(dl, "_download_once", flaky)
+    monkeypatch.setattr(dl.time, "sleep", lambda s: None)
+    out = dl.download("https://example.invalid/f", tmp_path / "f", attempts=5)
+    assert out.read_text() == "ok" and calls["n"] == 3
+
+
+def test_download_gives_up_after_attempts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import requests
+
+    from botgraph_ml import download as dl
+
+    def always_down(url: str, dest: Path) -> Path:
+        raise requests.Timeout("down")
+
+    monkeypatch.setattr(dl, "_download_once", always_down)
+    monkeypatch.setattr(dl.time, "sleep", lambda s: None)
+    with pytest.raises(requests.Timeout):
+        dl.download("https://example.invalid/f", tmp_path / "f", attempts=3)
