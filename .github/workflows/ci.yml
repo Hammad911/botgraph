@@ -51,7 +51,7 @@ jobs:
           test "$(docker run --rm --entrypoint id botgraph:ci -u)" = 10001
           docker run --rm --read-only --tmpfs /tmp botgraph:ci --help > /dev/null
       - name: Scan images for fixable critical/high vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
           image-ref: botgraph:ci
@@ -59,7 +59,7 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
       - name: Scan the console image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: image
           image-ref: botgraph-web:ci
