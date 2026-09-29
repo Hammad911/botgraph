@@ -97,7 +97,7 @@ jobs:
         run: |
           uv export --frozen --no-dev --no-emit-workspace --no-hashes --format requirements-txt -o req.txt
           uvx pip-audit -r req.txt --no-deps --disable-pip --strict
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: npm (production dependencies)
@@ -156,7 +156,7 @@ jobs:
         working-directory: .
       - run: uv sync
         working-directory: .
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
