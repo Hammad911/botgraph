@@ -124,7 +124,10 @@ def write_metadata(directory: Path, threshold: float, split: str, **extra: Any) 
     on validation data and the feature layout it was trained with."""
     try:
         sha = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
+            ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607 (git from PATH)
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         sha = "unknown"

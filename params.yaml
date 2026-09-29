@@ -87,3 +87,14 @@ stream:
   levels:
     warning: { k: 3, n: 5 }
     alert: { k: 12, n: 15 }
+  drift:
+    # PSI of internal-host features and scores vs the training data and vs the sensor's own
+    # baseline (its first baseline_windows windows), over the last recent_windows windows,
+    # reported every `every` windows. Both samples grow until they hold min_samples host
+    # rows (small networks), up to max_windows; PSI on fewer rows is noise.
+    enabled: true
+    baseline_windows: 60
+    recent_windows: 60
+    every: 10
+    min_samples: 1000
+    max_windows: 1440 # 24 h

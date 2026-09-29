@@ -108,14 +108,14 @@ def test_users_and_passwords(tmp_path) -> None:  # type: ignore[no-untyped-def]
     assert not verify_password("x", "not-a-hash")
 
     store = Store(f"sqlite:///{tmp_path / 'u.db'}")
-    store.create_user("admin", "s3cret-pass", "admin")
-    assert store.authenticate("admin", "s3cret-pass").role == "admin"  # type: ignore[union-attr]
+    store.create_user("admin", "s3cret-password", "admin")
+    assert store.authenticate("admin", "s3cret-password").role == "admin"  # type: ignore[union-attr]
     assert store.authenticate("admin", "nope") is None
-    assert store.authenticate("ghost", "s3cret-pass") is None
+    assert store.authenticate("ghost", "s3cret-password") is None
     with pytest.raises(ValueError):
         store.create_user("x", "short", "admin")
     with pytest.raises(ValueError):
-        store.create_user("y", "long-enough", "root")
+        store.create_user("y", "long-enough-pw", "root")
 
 
 def test_sqlite_parent_directories_are_created(tmp_path) -> None:  # type: ignore[no-untyped-def]

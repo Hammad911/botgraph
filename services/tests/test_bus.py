@@ -30,3 +30,19 @@ def test_codec_rejects_non_objects() -> None:
     assert decode(encode({"a": 1})) == {"a": 1}
     with pytest.raises(ValueError):
         decode(b"[1, 2]")
+
+
+def test_kafka_security_comes_from_the_environment(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from botgraph_stream.bus import security_config
+
+    monkeypatch.setenv("BOTGRAPH_KAFKA_SECURITY_PROTOCOL", "SASL_SSL")
+    monkeypatch.setenv("BOTGRAPH_KAFKA_SASL_MECHANISM", "SCRAM-SHA-512")
+    monkeypatch.setenv("BOTGRAPH_KAFKA_SASL_USERNAME", "detector")
+    monkeypatch.setenv("BOTGRAPH_KAFKA_SASL_PASSWORD", "s3cret")
+    monkeypatch.delenv("BOTGRAPH_KAFKA_SSL_CA_LOCATION", raising=False)
+    assert security_config() == {
+        "security.protocol": "SASL_SSL",
+        "sasl.mechanisms": "SCRAM-SHA-512",
+        "sasl.username": "detector",
+        "sasl.password": "s3cret",
+    }
