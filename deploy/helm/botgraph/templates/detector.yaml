@@ -1,0 +1,62 @@
+{{- if .Values.detector.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "botgraph.fullname" . }}-detector
+  labels: {{- include "botgraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: detector
+spec:
+  replicas: {{ .Values.detector.replicas }}
+  # Alert state (k-of-n history) lives in memory per sensor: never run old and new side by side.
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: {{- include "botgraph.selector" (list . "detector") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "botgraph.selector" (list . "detector") | nindent 8 }}
+    spec:
+      {{- include "botgraph.podDefaults" . | nindent 6 }}
+      containers:
+        - name: detector
+          image: {{ include "botgraph.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - detect
+            - --internal-nets
+            - {{ .Values.detector.internalNets | quote }}
+            - --learning-minutes
+            - {{ .Values.detector.learningMinutes | quote }}
+            - --model
+            - {{ .Values.models.name | quote }}
+            - --topic-prefix
+            - {{ .Values.kafka.topicPrefix | quote }}
+          env:
+            {{- include "botgraph.env" . | nindent 12 }}
+            {{- include "botgraph.kafkaEnv" . | nindent 12 }}
+          ports:
+            - { name: metrics, containerPort: {{ .Values.metricsPort }} }
+          {{- include "botgraph.probes" . | nindent 10 }}
+          resources: {{- toYaml .Values.detector.resources | nindent 12 }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            {{- include "botgraph.scratchMounts" . | nindent 12 }}
+            - { name: models, mountPath: /app/ml/models, readOnly: true }
+      volumes:
+        {{- include "botgraph.scratchVolumes" . | nindent 8 }}
+        - name: models
+          persistentVolumeClaim:
+            claimName: {{ required "models.existingClaim: a PVC with the trained bundles (ml/models)" .Values.models.existingClaim }}
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "botgraph.fullname" . }}-detector
+  labels: {{- include "botgraph.labels" . | nindent 4 }}
+    app.kubernetes.io/component: detector
+    botgraph.io/metrics: "true"
+spec:
+  selector: {{- include "botgraph.selector" (list . "detector") | nindent 4 }}
+  ports:
+    - { name: metrics, port: {{ .Values.metricsPort }}, targetPort: metrics }
+{{- end }}

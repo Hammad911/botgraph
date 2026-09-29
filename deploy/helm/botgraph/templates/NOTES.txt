@@ -1,0 +1,16 @@
+BotGraph {{ .Chart.AppVersion }} is deployed as {{ include "botgraph.fullname" . }}.
+
+{{- if .Values.ingress.enabled }}
+Console: {{ include "botgraph.host" . }}
+{{- end }}
+
+Create the first admin account (prompts for the password):
+  kubectl -n {{ .Release.Namespace }} exec -it deploy/{{ include "botgraph.fullname" . }}-api -- \
+    botgraph-api create-user --username admin --role admin
+
+Send flows to the Kafka topic "{{ .Values.kafka.topicPrefix }}flows.raw" keyed by sensor id.
+{{- if not .Values.monitoring.serviceMonitor.enabled }}
+
+Metrics are on port {{ .Values.metricsPort }} of each service; enable monitoring.serviceMonitor
+for the Prometheus operator.
+{{- end }}

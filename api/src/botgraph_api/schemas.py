@@ -17,7 +17,7 @@ class LoginRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
-    token_type: Literal["bearer"] = "bearer"
+    token_type: Literal["bearer"] = "bearer"  # noqa: S105 (OAuth2 token type, not a secret)
     username: str
     role: str
 
@@ -113,3 +113,51 @@ class GraphOut(BaseModel):
     window_id: str
     window_start: float
     graph: dict[str, Any]
+
+
+class DriftVersus(BaseModel):
+    """PSI of recent traffic against one reference (``training`` or ``baseline``)."""
+
+    features: dict[str, float]
+    max_feature: str
+    max_psi: float
+    score_psi: float
+
+
+class DriftOut(BaseModel):
+    sensor_id: str
+    window_start: float
+    windows: int
+    hosts: int
+    baseline: DriftVersus | None
+    training: DriftVersus | None
+
+    @classmethod
+    def from_report(cls, row: Any) -> DriftOut:
+        report = row.report
+        return cls(
+            sensor_id=row.sensor_id,
+            window_start=row.window_start,
+            windows=report.get("windows", 0),
+            hosts=report.get("hosts", 0),
+            baseline=report.get("baseline"),
+            training=report.get("training"),
+        )
+
+
+class DriftPoint(BaseModel):
+    window_start: float
+    baseline_psi: float | None  # worst of the feature PSIs and the score PSI
+    training_psi: float | None
+
+
+class AuditOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    at: datetime
+    actor: str | None
+    action: str
+    target: str | None
+    client: str | None
+    detail: dict[str, Any] | None

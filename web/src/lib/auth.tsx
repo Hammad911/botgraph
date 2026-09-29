@@ -36,6 +36,11 @@ function write(value: Session | null) {
   listeners.forEach((l) => l());
 }
 
+/** Drop the session (an expired or revoked token); the console layout then redirects to login. */
+export function clearSession() {
+  if (typeof window !== "undefined") write(null);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const raw = useSyncExternalStore(subscribe, read, () => null);
   // On the server (and the first client pass) storage is unknown: `ready` gates redirects.

@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import logging
 import os
 import signal
 import statistics
@@ -34,17 +35,22 @@ from rich.table import Table
 
 from botgraph_core import GraphConfig, Label
 from botgraph_ml.config import load_params, repo_path, window_spec
+from botgraph_ml.drift import REFERENCE_FILE, Reference
 from botgraph_ml.metrics import AlertRule
 from botgraph_stream.alerts import AlertEngine
 from botgraph_stream.bus import ALERTS, DETECTIONS, DLQ, FLOWS, FLOWS_RAW, Bus, KafkaBus, LocalBus
 from botgraph_stream.detector import Detector
+from botgraph_stream.drift import DriftMonitor
 from botgraph_stream.ingest import IngestStats, ingest_step
-from botgraph_stream.metrics import serve_metrics
+from botgraph_stream.logs import configure_logging
+from botgraph_stream.metrics import CONSUMER_LAG, Health, serve_metrics
 from botgraph_stream.replay import Replayer, ReplaySource, load_source
 from botgraph_stream.service import DetectorService
 from botgraph_stream.store import Store
 
 console = Console()
+log = logging.getLogger("botgraph.cli")
+LAG_EVERY_S = 15.0
 
 
 def default_db_url() -> str:
@@ -174,8 +180,9 @@ def build_service(
 ) -> DetectorService:
     """Detector + alert engine + store, configured from params.yaml's ``stream`` section."""
     sp = params["stream"]
+    bundle = repo_path(params["data"]["models_dir"]) / (model or sp["model"])
     detector = Detector(
-        repo_path(params["data"]["models_dir"]) / (model or sp["model"]),
+        bundle,
         GraphConfig(
             internal_nets=internal_nets,
             min_flows_for_periodicity=int(params["graph"]["min_flows_for_periodicity"]),
@@ -192,7 +199,38 @@ def build_service(
         thresholds=store.thresholds(),
     )
     steps = sp["explain_steps"] if explain_steps is None else explain_steps
-    return DetectorService(bus, detector, engine, store, explain_steps=int(steps))
+    return DetectorService(
+        bus, detector, engine, store, explain_steps=int(steps), drift=build_drift(sp, bundle, store)
+    )
+
+
+def build_drift(sp: dict[str, Any], bundle: Path, store: Store) -> DriftMonitor | None:
+    cfg = sp.get("drift") or {}
+    if not cfg.get("enabled", True):
+        return None
+    training = None
+    if (bundle / REFERENCE_FILE).exists():
+        training = Reference.load(bundle / REFERENCE_FILE)
+    else:
+        log.info(
+            "no training drift reference; run `python -m botgraph_ml.drift`",
+            extra={"bundle": str(bundle)},
+        )
+    baselines = {}
+    for sensor, raw in store.drift_baselines().items():
+        try:
+            baselines[sensor] = Reference.from_dict(raw)
+        except (KeyError, ValueError):  # built for another feature layout: relearn it
+            log.warning("discarding incompatible drift baseline", extra={"sensor_id": sensor})
+    return DriftMonitor(
+        training,
+        baselines,
+        baseline_windows=int(cfg.get("baseline_windows", 60)),
+        recent_windows=int(cfg.get("recent_windows", 60)),
+        every=int(cfg.get("every", 10)),
+        min_samples=int(cfg.get("min_samples", 1000)),
+        max_windows=int(cfg.get("max_windows", 1440)),
+    )
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -259,8 +297,18 @@ def _kafka(args: argparse.Namespace, group: str) -> KafkaBus:
     return bus
 
 
-def serve(step: Callable[[], int], idle_exit_s: float | None = None) -> None:
-    """Run ``step`` until SIGINT/SIGTERM, or until nothing arrived for ``idle_exit_s``."""
+def serve(
+    step: Callable[[], int],
+    idle_exit_s: float | None = None,
+    health: Health | None = None,
+    every: Callable[[], None] | None = None,
+    every_s: float = LAG_EVERY_S,
+) -> None:
+    """Run ``step`` until SIGINT/SIGTERM, or until nothing arrived for ``idle_exit_s``.
+
+    Each iteration is a liveness heartbeat; ``every`` runs at most once per ``every_s``
+    (consumer-lag sampling).
+    """
     stop = False
 
     def _stop(*_: object) -> None:
@@ -269,12 +317,31 @@ def serve(step: Callable[[], int], idle_exit_s: float | None = None) -> None:
 
     signal.signal(signal.SIGINT, _stop)
     signal.signal(signal.SIGTERM, _stop)
-    last_work = time.monotonic()
+    if health is not None:
+        health.set_ready()
+    last_work = last_every = time.monotonic()
     while not stop:
         if step():
             last_work = time.monotonic()
         elif idle_exit_s is not None and time.monotonic() - last_work >= idle_exit_s:
             break
+        if health is not None:
+            health.beat()
+        if every is not None and time.monotonic() - last_every >= every_s:
+            last_every = time.monotonic()
+            every()
+    if health is not None:
+        health.set_ready(False)
+
+
+def _lag_sampler(bus: KafkaBus, topic: str) -> Callable[[], None]:
+    def sample() -> None:
+        try:
+            CONSUMER_LAG.labels(topic).set(bus.lag(topic))
+        except Exception:  # metrics must never take the service down
+            log.warning("consumer lag sample failed", exc_info=True)
+
+    return sample
 
 
 def cmd_replay(args: argparse.Namespace) -> None:
@@ -290,19 +357,30 @@ def cmd_replay(args: argparse.Namespace) -> None:
     console.print(f"replayed {replayer.published:,} flows as sensor {source.sensor_id}")
 
 
+def _health(args: argparse.Namespace) -> Health | None:
+    configure_logging()
+    return serve_metrics(args.metrics_port) if args.metrics_port else None
+
+
 def cmd_ingest(args: argparse.Namespace) -> None:
-    if args.metrics_port:
-        serve_metrics(args.metrics_port)
+    health = _health(args)
     bus, stats = _kafka(args, "ingest"), IngestStats()
-    console.print(f"ingest: {bus.bootstrap} {args.topic_prefix}{FLOWS_RAW} -> {FLOWS}")
-    serve(lambda: ingest_step(bus, stats, timeout=1.0), args.idle_exit)
+    log.info(
+        "ingest started",
+        extra={"bootstrap": bus.bootstrap, "source": f"{args.topic_prefix}{FLOWS_RAW}"},
+    )
+    serve(
+        lambda: ingest_step(bus, stats, timeout=1.0),
+        args.idle_exit,
+        health,
+        _lag_sampler(bus, FLOWS_RAW),
+    )
     bus.close()
-    console.print(f"ingest stopped: {stats}")
+    log.info("ingest stopped", extra={"stats": vars(stats)})
 
 
 def cmd_detect(args: argparse.Namespace) -> None:
-    if args.metrics_port:
-        serve_metrics(args.metrics_port)
+    health = _health(args)
     params = load_params()
     bus = _kafka(args, "detector")
     nets = tuple(n.strip() for n in args.internal_nets.split(","))
@@ -320,13 +398,27 @@ def cmd_detect(args: argparse.Namespace) -> None:
         args.model,
         args.explain_steps,
     )
-    console.print(f"detector: {bus.bootstrap} {args.topic_prefix}{FLOWS} -> {DETECTIONS}, {ALERTS}")
-    serve(lambda: service.step(timeout=1.0), args.idle_exit)
+    log.info(
+        "detector started",
+        extra={
+            "bootstrap": bus.bootstrap,
+            "source": f"{args.topic_prefix}{FLOWS}",
+            "model": service.detector.metadata.get("model_kind"),
+            "internal_nets": nets,
+        },
+    )
+    serve(
+        lambda: service.step(timeout=1.0),
+        args.idle_exit,
+        health,
+        _lag_sampler(bus, FLOWS),
+    )
     if args.idle_exit is not None:
         service.flush()  # finite input (tests, batch replays): close the remaining windows
     bus.close()
-    console.print(
-        f"detector stopped: {service.detector.stats.windows} windows, {service.stats.events}"
+    log.info(
+        "detector stopped",
+        extra={"windows": service.detector.stats.windows, "events": service.stats.events},
     )
 
 
@@ -436,7 +528,12 @@ def main(argv: list[str] | None = None) -> None:
     def kafka_args(p: argparse.ArgumentParser) -> argparse.ArgumentParser:
         p.add_argument("--bootstrap", help="Kafka bootstrap servers (env BOTGRAPH_KAFKA_BOOTSTRAP)")
         p.add_argument("--topic-prefix", default="", help="namespace for topic names")
-        p.add_argument("--metrics-port", type=int, help="serve Prometheus /metrics on this port")
+        p.add_argument(
+            "--metrics-port",
+            type=int,
+            default=int(os.environ.get("BOTGRAPH_METRICS_PORT", "0")) or None,
+            help="serve /metrics, /healthz and /readyz on this port (env BOTGRAPH_METRICS_PORT)",
+        )
         return p
 
     rep = kafka_args(sub.add_parser("replay", help="publish a recorded capture to flows.raw"))

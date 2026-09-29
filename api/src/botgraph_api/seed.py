@@ -1,7 +1,8 @@
 """Synthetic demo data for UI development, screenshots and the end-to-end browser test.
 
 One sensor, an hour of one-minute windows: eight normal hosts and one host (10.0.0.66) that
-beacons to an IRC server, a warning and an alert with an explanation, and a map snapshot.
+beacons to an IRC server, a warning and an alert with an explanation, a map snapshot, and
+drift reports in which the beaconing pushes the network past the "significant" PSI level.
 """
 
 from __future__ import annotations
@@ -113,3 +114,37 @@ def seed(store: Store, username: str, password: str, role: str = "admin") -> Non
             },
         }
     )
+    # Drift: the bot's beaconing slowly moves the network away from its baseline.
+    features = (
+        "log_out_degree",
+        "log_out_flows",
+        "log_bytes_sent",
+        "sent_ratio",
+        "periodicity",
+        "dst_entropy",
+    )
+    for i, w in enumerate(range(10, 61, 10)):
+        drift = round(0.02 + 0.06 * i, 4)
+        baseline = {f: round(0.01 + 0.002 * j, 4) for j, f in enumerate(features)}
+        baseline["periodicity"] = drift
+        training = {f: round(0.05 + 0.01 * j, 4) for j, f in enumerate(features)}
+        store.record_drift(
+            {
+                "sensor_id": SENSOR,
+                "window_start": T0 + 60 * (w - 1),
+                "windows": 60,
+                "hosts": 540,
+                "baseline": {
+                    "features": baseline,
+                    "max_feature": "periodicity",
+                    "max_psi": drift,
+                    "score_psi": round(drift / 2, 4),
+                },
+                "training": {
+                    "features": training,
+                    "max_feature": "dst_entropy",
+                    "max_psi": training["dst_entropy"],
+                    "score_psi": 0.04,
+                },
+            }
+        )

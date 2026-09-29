@@ -9,7 +9,10 @@ Tables:
 * window_stats    one row per scored window
 * host_scores     every internal host's score per window (host timelines; pruned by retention)
 * graph_snapshots latest compact window graph per sensor (the live network map)
-* users           dashboard accounts (admin / analyst / viewer)
+* users           dashboard accounts (admin / analyst / viewer), lockout and token revocation
+* drift_baselines each sensor's drift reference (its traffic right after calibration)
+* drift_reports   periodic PSI reports per sensor (pruned by retention)
+* audit_events    who did what in the console (logins, triage, recalibration, user changes)
 
 The schema is managed by Alembic migrations (``botgraph_stream/migrations``); ``Store`` upgrades
 the database on startup, including databases created before migrations existed.
@@ -22,12 +25,13 @@ import hashlib
 import hmac
 import os
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     Float,
     Index,
@@ -36,6 +40,7 @@ from sqlalchemy import (
     create_engine,
     delete,
     event,
+    false,
     func,
     inspect,
     select,
@@ -47,10 +52,19 @@ DEFAULT_URL = "sqlite:///botgraph.db"
 ALERT_STATUSES = ("open", "investigating", "resolved", "false_positive")
 ROLES = ("viewer", "analyst", "admin")  # ascending privileges
 MIGRATIONS = Path(__file__).parent / "migrations"
+MIN_PASSWORD_LENGTH = 12
+MAX_FAILED_LOGINS = 5
+LOCKOUT = timedelta(minutes=15)
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
+
+
+def _naive_utc() -> datetime:
+    """UTC without tzinfo: what SQLite and Postgres ``DateTime`` columns give back, so the two
+    can be compared."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class Base(DeclarativeBase):
@@ -132,6 +146,40 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(256))
     role: Mapped[str] = mapped_column(String(16))  # viewer | analyst | admin
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    failed_logins: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Tokens carry the version they were issued at; bumping it revokes every issued token.
+    token_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    disabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+
+
+class DriftBaseline(Base):
+    __tablename__ = "drift_baselines"
+    sensor_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    reference: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class DriftReport(Base):
+    __tablename__ = "drift_reports"
+    __table_args__ = (Index("ix_drift_reports_sensor", "sensor_id", "window_start"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    sensor_id: Mapped[str] = mapped_column(String(128))
+    window_start: Mapped[float] = mapped_column(Float)
+    baseline_psi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    training_psi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    report: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
+    actor: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    action: Mapped[str] = mapped_column(String(64))
+    target: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    client: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    detail: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
 
 # --------------------------------------------------------------------------- passwords
@@ -153,6 +201,9 @@ def verify_password(password: str, stored: str) -> bool:
         return False
     if scheme != "scrypt":
         return False
+    # Bound the work factor, so a tampered hash cannot make verification arbitrarily slow.
+    if not (int(n) <= 2**16 and int(r) <= 16 and int(p) <= 4):
+        return False
     candidate = hashlib.scrypt(
         password.encode(),
         salt=base64.b64decode(salt),
@@ -162,6 +213,11 @@ def verify_password(password: str, stored: str) -> bool:
         dklen=32,
     )
     return hmac.compare_digest(candidate, base64.b64decode(digest))
+
+
+# Verified against when the user does not exist, so an unknown username costs as much as a
+# wrong password (no account enumeration by response time).
+_DUMMY_HASH = hash_password(secrets.token_urlsafe(16))
 
 
 # --------------------------------------------------------------------------- migrations
@@ -211,6 +267,15 @@ class Store:
         migrate(self.engine)
         self.host_score_retention_s = host_score_retention_s
         self._windows_since_prune = 0
+
+    def ping(self) -> bool:
+        """True if the database answers a trivial query (readiness probes)."""
+        try:
+            with self.engine.connect() as connection:
+                connection.execute(select(1))
+            return True
+        except Exception:
+            return False
 
     # ---------------------------------------------------------------- pipeline writes
 
@@ -267,10 +332,15 @@ class Store:
     def _prune(self, sensor_id: str, latest: float) -> None:
         self._windows_since_prune = 0
         with Session(self.engine) as s, s.begin():
+            cutoff = latest - self.host_score_retention_s
             s.execute(
                 delete(HostScore).where(
-                    HostScore.sensor_id == sensor_id,
-                    HostScore.window_start < latest - self.host_score_retention_s,
+                    HostScore.sensor_id == sensor_id, HostScore.window_start < cutoff
+                )
+            )
+            s.execute(
+                delete(DriftReport).where(
+                    DriftReport.sensor_id == sensor_id, DriftReport.window_start < cutoff
                 )
             )
 
@@ -318,7 +388,57 @@ class Store:
             if sensor is None:
                 return False
             sensor.state, sensor.threshold, sensor.calibrated_at = "learning", None, None
+            # The network is relearned from scratch, including what "normal" looks like.
+            s.execute(delete(DriftBaseline).where(DriftBaseline.sensor_id == sensor_id))
             return True
+
+    # ---------------------------------------------------------------- drift
+
+    def drift_baselines(self) -> dict[str, dict[str, Any]]:
+        with Session(self.engine) as s:
+            return {b.sensor_id: b.reference for b in s.scalars(select(DriftBaseline)).all()}
+
+    def save_drift_baseline(self, sensor_id: str, reference: dict[str, Any]) -> None:
+        with Session(self.engine) as s, s.begin():
+            row = s.get(DriftBaseline, sensor_id) or DriftBaseline(sensor_id=sensor_id)
+            row.reference, row.created_at = reference, _now()
+            s.add(row)
+
+    def record_drift(self, report: dict[str, Any]) -> None:
+        def worst(name: str) -> float | None:
+            part = report.get(name)
+            return None if part is None else max(part["max_psi"], part["score_psi"])
+
+        with Session(self.engine) as s, s.begin():
+            s.add(
+                DriftReport(
+                    sensor_id=report["sensor_id"],
+                    window_start=float(report["window_start"]),
+                    baseline_psi=worst("baseline"),
+                    training_psi=worst("training"),
+                    report=report,
+                )
+            )
+
+    def drift_reports(self, sensor_id: str, limit: int = 1000) -> list[DriftReport]:
+        """A sensor's drift history, oldest first (at most ``limit`` latest reports)."""
+        with Session(self.engine) as s:
+            rows = s.scalars(
+                select(DriftReport)
+                .where(DriftReport.sensor_id == sensor_id)
+                .order_by(DriftReport.window_start.desc(), DriftReport.id.desc())
+                .limit(limit)
+            ).all()
+        return list(reversed(rows))
+
+    def latest_drift(self) -> list[DriftReport]:
+        """The newest drift report of every sensor."""
+        with Session(self.engine) as s:
+            newest = (
+                select(func.max(DriftReport.id)).group_by(DriftReport.sensor_id).scalar_subquery()
+            )
+            query = select(DriftReport).where(DriftReport.id.in_(newest))
+            return list(s.scalars(query.order_by(DriftReport.sensor_id)).all())
 
     # ---------------------------------------------------------------- reads
 
@@ -455,20 +575,99 @@ class Store:
     def create_user(self, username: str, password: str, role: str) -> User:
         if role not in ROLES:
             raise ValueError(f"role must be one of {ROLES}")
-        if len(password) < 8:
-            raise ValueError("password must be at least 8 characters")
+        _check_password(password)
         with Session(self.engine, expire_on_commit=False) as s, s.begin():
             user = User(username=username, password_hash=hash_password(password), role=role)
             s.add(user)
             return user
 
-    def authenticate(self, username: str, password: str) -> User | None:
-        with Session(self.engine) as s:
+    def login(self, username: str, password: str) -> tuple[User | None, str]:
+        """Check a password; returns (user, "ok") or (None, "invalid" | "locked" | "disabled").
+
+        After ``MAX_FAILED_LOGINS`` wrong passwords in a row the account is locked for
+        ``LOCKOUT``. Every outcome costs one scrypt verification, so response times do not
+        reveal whether an account exists or is locked.
+        """
+        now = _naive_utc()
+        with Session(self.engine, expire_on_commit=False) as s, s.begin():
             user = s.scalar(select(User).where(User.username == username))
-        if user is None or not verify_password(password, user.password_hash):
-            return None
-        return user
+            if user is None:
+                verify_password(password, _DUMMY_HASH)
+                return None, "invalid"
+            if user.disabled or (user.locked_until is not None and user.locked_until > now):
+                verify_password(password, _DUMMY_HASH)
+                return None, "disabled" if user.disabled else "locked"
+            if not verify_password(password, user.password_hash):
+                user.failed_logins += 1
+                if user.failed_logins >= MAX_FAILED_LOGINS:
+                    user.failed_logins, user.locked_until = 0, now + LOCKOUT
+                    return None, "locked"
+                return None, "invalid"
+            user.failed_logins, user.locked_until = 0, None
+            return user, "ok"
+
+    def authenticate(self, username: str, password: str) -> User | None:
+        return self.login(username, password)[0]
 
     def get_user(self, username: str) -> User | None:
         with Session(self.engine) as s:
             return s.scalar(select(User).where(User.username == username))
+
+    def users(self) -> list[User]:
+        with Session(self.engine) as s:
+            return list(s.scalars(select(User).order_by(User.username)).all())
+
+    def _update_user(self, username: str, **changes: Any) -> bool:
+        with Session(self.engine) as s, s.begin():
+            user = s.scalar(select(User).where(User.username == username))
+            if user is None:
+                return False
+            for key, value in changes.items():
+                setattr(user, key, value)
+            user.token_version += 1  # any account change signs the user out everywhere
+            return True
+
+    def set_password(self, username: str, password: str) -> bool:
+        _check_password(password)
+        return self._update_user(
+            username, password_hash=hash_password(password), failed_logins=0, locked_until=None
+        )
+
+    def set_disabled(self, username: str, disabled: bool) -> bool:
+        return self._update_user(username, disabled=disabled)
+
+    def revoke_tokens(self, username: str) -> bool:
+        return self._update_user(username)
+
+    # ---------------------------------------------------------------- audit
+
+    def audit(
+        self,
+        action: str,
+        actor: str | None = None,
+        target: str | None = None,
+        client: str | None = None,
+        detail: dict[str, Any] | None = None,
+    ) -> None:
+        with Session(self.engine) as s, s.begin():
+            s.add(
+                AuditEvent(
+                    action=action,
+                    actor=actor,
+                    target=target,
+                    client=client,
+                    detail=detail,
+                )
+            )
+
+    def audit_events(self, limit: int = 200, action: str | None = None) -> list[AuditEvent]:
+        query = select(AuditEvent)
+        if action:
+            query = query.where(AuditEvent.action == action)
+        with Session(self.engine) as s:
+            return list(s.scalars(query.order_by(AuditEvent.id.desc()).limit(limit)).all())
+
+
+def _check_password(password: str) -> None:
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise ValueError(f"password must be at least {MIN_PASSWORD_LENGTH} characters")

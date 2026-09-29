@@ -1,19 +1,29 @@
 "use client";
 
-import { AlertOctagon, BellRing, LayoutDashboard, LogOut, Network, Radar, Share2 } from "lucide-react";
+import {
+  AlertOctagon,
+  BellRing,
+  LayoutDashboard,
+  LogOut,
+  Network,
+  Radar,
+  ScrollText,
+  Share2,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import type { Alert } from "@/lib/api";
+import { endpoints, type Alert, type Role } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { sensorLabel } from "@/lib/format";
 import { useLive, type LiveState } from "@/lib/live";
 
-const NAV = [
+const NAV: { href: string; label: string; icon: typeof Radar; role?: Role }[] = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/alerts", label: "Alerts", icon: BellRing },
   { href: "/map", label: "Live map", icon: Share2 },
   { href: "/sensors", label: "Sensors", icon: Radar },
+  { href: "/audit", label: "Audit log", icon: ScrollText, role: "admin" },
 ];
 
 function LiveDot({ state }: { state: LiveState }) {
@@ -28,7 +38,7 @@ function LiveDot({ state }: { state: LiveState }) {
 }
 
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
-  const { session, ready, signOut } = useAuth();
+  const { session, ready, signOut, can } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [toast, setToast] = useState<Alert | null>(null);
@@ -58,7 +68,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           <span className="font-semibold">BotGraph</span>
         </div>
         <nav className="flex-1 space-y-0.5 px-2">
-          {NAV.map(({ href, label, icon: Icon }) => {
+          {NAV.filter((n) => !n.role || can(n.role)).map(({ href, label, icon: Icon }) => {
             const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <Link
@@ -81,6 +91,8 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           </div>
           <button
             onClick={() => {
+              // Revoke the token server-side too; signing out locally must not wait on it.
+              endpoints.logout(session.token).catch(() => undefined);
               signOut();
               router.replace("/login");
             }}

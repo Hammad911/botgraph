@@ -138,3 +138,25 @@ export function ErrorNote({ error }: { error: unknown }) {
     </p>
   );
 }
+
+/** PSI drift level: icon + label + status colour (thresholds 0.1 / 0.25, the usual reading). */
+export function DriftBadge({ psi }: { psi: number }) {
+  const value = psi >= 10 ? psi.toFixed(0) : psi.toFixed(2);
+  if (psi > 0.25)
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-critical/12 px-2 py-0.5 text-xs font-medium text-critical">
+        <AlertOctagon className="size-3.5" aria-hidden /> Significant <span className="tabular">{value}</span>
+      </span>
+    );
+  if (psi > 0.1)
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-ink">
+        <AlertTriangle className="size-3.5 text-warning" aria-hidden /> Moderate <span className="tabular">{value}</span>
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 text-xs text-ink-2">
+      <CheckCircle2 className="size-3.5 text-good" aria-hidden /> Stable <span className="tabular">{value}</span>
+    </span>
+  );
+}

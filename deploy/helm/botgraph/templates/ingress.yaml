@@ -1,0 +1,31 @@
+{{- if .Values.ingress.enabled }}
+# One origin for the console: /api (REST and the live WebSocket) goes to the API, everything
+# else to the web console. The console's CSP then only needs 'self'.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "botgraph.fullname" . }}
+  labels: {{- include "botgraph.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts: [{{ .Values.ingress.host | quote }}]
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: { name: {{ include "botgraph.fullname" . }}-api, port: { name: http } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: {{ include "botgraph.fullname" . }}-web, port: { name: http } }
+{{- end }}

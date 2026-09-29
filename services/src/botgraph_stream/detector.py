@@ -171,6 +171,16 @@ class Detector:
     def late_flows(self) -> int:
         return sum(w.late_flows for w in self._windowers.values())
 
+    def late_flows_for(self, sensor: str) -> int:
+        windower = self._windowers.get(sensor)
+        return 0 if windower is None else windower.late_flows
+
+    def window_graph(self, sensor: str, window_id: str) -> WindowGraph | None:
+        """A recently scored window's graph (kept for explanations and drift monitoring)."""
+        recent = self._recent.get(sensor)
+        cached = None if recent is None else recent.get(window_id)
+        return None if cached is None else cached[0]
+
     @torch.no_grad()
     def score_window(self, sensor: str, window: Window) -> dict[str, Any]:
         started = time.perf_counter()

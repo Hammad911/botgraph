@@ -3,13 +3,24 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Alert } from "./api";
+import { clearSession } from "./auth";
 
 export type LiveState = "connecting" | "live" | "offline";
 export type LiveEvent =
   | { type: "alert"; alert: Alert }
   | { type: "window"; sensor_id: string; window_start: number | null };
 
-const WS_URL = process.env.NEXT_PUBLIC_BOTGRAPH_WS_URL ?? "ws://127.0.0.1:8000/api/ws";
+/**
+ * NEXT_PUBLIC_BOTGRAPH_WS_URL if set at build time. Otherwise, in a production build the
+ * socket is same-origin (the ingress routes /api, WebSocket included, to the API); `next dev`
+ * talks to the API on its own port.
+ */
+function wsUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_BOTGRAPH_WS_URL;
+  if (configured) return configured;
+  if (process.env.NODE_ENV !== "production") return "ws://127.0.0.1:8000/api/ws";
+  return `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/api/ws`;
+}
 
 /**
  * Keeps one WebSocket to the API open while signed in. Each push invalidates the queries it
@@ -29,7 +40,7 @@ export function useLive(token: string | null, onAlert?: (a: Alert) => void): Liv
     const connect = () => {
       setState("connecting");
       // The token goes in the first message, never the URL (URLs end up in logs).
-      socket = new WebSocket(WS_URL);
+      socket = new WebSocket(wsUrl());
       socket.onopen = () => socket?.send(JSON.stringify({ type: "auth", token }));
       socket.onmessage = (msg) => {
         const event = JSON.parse(msg.data) as LiveEvent | { type: "ready" };
@@ -50,7 +61,11 @@ export function useLive(token: string | null, onAlert?: (a: Alert) => void): Liv
       };
       socket.onclose = (e) => {
         setState("offline");
-        if (closed || e.code === 4401) return; // unmounted, or the token was rejected
+        if (closed) return;
+        if (e.code === 4401) {
+          clearSession(); // the token expired or was revoked
+          return;
+        }
         timer = setTimeout(connect, Math.min(30_000, 1000 * 2 ** retry++));
       };
     };

@@ -83,7 +83,7 @@ def calibrate_fold(
         if name != held_out
         for _, graph in labelled_windows(flows_dir / f"{name}.parquet", config, spec, 1)
     ]
-    rng = random.Random(params["gnn"]["seed"])
+    rng = random.Random(params["gnn"]["seed"])  # noqa: S311 (reproducible sampling, not crypto)
     ctu_idx = rng.sample(range(len(ctu["train"])), min(args.ctu_windows, len(ctu["train"])))
     repeats = max(1, round(args.iot_share * len(ctu_idx) / ((1 - args.iot_share) * len(calib))))
     train = ConcatDataset([Subset(ctu["train"], ctu_idx), *([calib] * repeats)])  # type: ignore[list-item]

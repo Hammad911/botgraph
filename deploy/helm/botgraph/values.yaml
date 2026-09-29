@@ -1,0 +1,144 @@
+# BotGraph Helm values. Kafka (or Redpanda) and Postgres are not deployed by this chart.
+#   helm install botgraph deploy/helm/botgraph -f my-values.yaml
+
+image:
+  repository: ghcr.io/hammad911/botgraph
+  tag: ""                      # defaults to the chart's appVersion
+  pullPolicy: IfNotPresent
+webImage:
+  repository: ghcr.io/hammad911/botgraph-web
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# ------------------------------------------------------------------ external services
+
+kafka:
+  bootstrap: redpanda.kafka.svc:9092
+  topicPrefix: ""
+  # Broker security (librdkafka settings). Username and password come from the secret.
+  securityProtocol: ""         # e.g. SASL_SSL
+  saslMechanism: ""            # e.g. SCRAM-SHA-512
+
+# Secrets: either name an existing Secret with the keys below, or let the chart create one from
+# `secrets.*` (fine for a lab; use an external secret manager in production).
+#   BOTGRAPH_DB_URL         postgresql+psycopg://user:password@host:5432/botgraph
+#   BOTGRAPH_JWT_SECRET     >= 32 bytes (openssl rand -base64 48)
+#   BOTGRAPH_KAFKA_SASL_USERNAME / BOTGRAPH_KAFKA_SASL_PASSWORD   (optional)
+existingSecret: ""
+secrets:
+  dbUrl: ""
+  jwtSecret: ""
+  kafkaUsername: ""
+  kafkaPassword: ""
+
+# ------------------------------------------------------------------ components
+
+logFormat: json
+logLevel: INFO
+metricsPort: 9100
+
+# Trained model bundles (ml/models/<name>/) for the detector, mounted read-only.
+models:
+  existingClaim: ""            # a PVC holding the bundles, e.g. gatv2/model.pt ...
+  name: gatv2
+
+ingest:
+  enabled: true
+  replicas: 1
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+detector:
+  enabled: true
+  # One detector per Kafka partition at most (flows are keyed by sensor).
+  replicas: 1
+  internalNets: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+  learningMinutes: 60
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits: { memory: 3Gi }
+
+api:
+  enabled: true
+  replicas: 2
+  corsOrigins: ""              # defaults to https://<ingress.host>
+  tokenTtlMinutes: 480
+  loginRateLimit: 10           # login attempts per client per minute, per replica
+  trustedProxies: "*"          # the ingress controller sets X-Forwarded-For; restrict if you can
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 1Gi }
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+web:
+  enabled: true
+  replicas: 2
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+
+# Runs the database migrations once per install/upgrade, before the pods roll.
+migrations:
+  enabled: true
+
+# ------------------------------------------------------------------ networking
+
+ingress:
+  enabled: true
+  className: nginx
+  host: botgraph.example.com
+  annotations:
+    # Live updates: keep the WebSocket open.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+  tls:
+    enabled: true
+    secretName: botgraph-tls
+
+networkPolicy:
+  enabled: true
+  # Where the ingress controller and Prometheus run (namespace labels).
+  ingressNamespaceSelector:
+    kubernetes.io/metadata.name: ingress-nginx
+  monitoringNamespaceSelector:
+    kubernetes.io/metadata.name: monitoring
+
+# ------------------------------------------------------------------ monitoring (prometheus-operator)
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    labels: {}                 # e.g. release: kube-prometheus-stack
+  prometheusRule:
+    enabled: false
+    labels: {}
+  grafanaDashboard:
+    enabled: false             # a ConfigMap picked up by the Grafana sidecar
+    labels:
+      grafana_dashboard: "1"
+
+# ------------------------------------------------------------------ pod defaults
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile: { type: RuntimeDefault }
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: { drop: [ALL] }
+nodeSelector: {}
+tolerations: []
+affinity: {}

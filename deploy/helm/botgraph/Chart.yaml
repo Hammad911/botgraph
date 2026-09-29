@@ -1,0 +1,10 @@
+apiVersion: v2
+name: botgraph
+description: >-
+  BotGraph: botnet detection with graph neural networks. Ingest, detector, API and analyst
+  console, with Prometheus monitoring. Kafka and Postgres are external.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.25.0-0"
+keywords: [security, botnet, gnn, network-monitoring]

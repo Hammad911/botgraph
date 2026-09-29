@@ -1,0 +1,31 @@
+{{- if .Values.migrations.enabled }}
+# Upgrades the database schema once, before new pods start (every component would otherwise
+# race to run the same Alembic migration on first start).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "botgraph.fullname" . }}-migrate
+  labels: {{- include "botgraph.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels: {{- include "botgraph.selector" (list . "migrate") | nindent 8 }}
+    spec:
+      {{- include "botgraph.podDefaults" . | nindent 6 }}
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: {{ include "botgraph.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [status]  # opening the store applies pending migrations
+          env: {{- include "botgraph.env" . | nindent 12 }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts: {{- include "botgraph.scratchMounts" . | nindent 12 }}
+      volumes: {{- include "botgraph.scratchVolumes" . | nindent 8 }}
+{{- end }}

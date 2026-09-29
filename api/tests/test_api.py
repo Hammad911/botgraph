@@ -226,3 +226,73 @@ def test_seed_demo_data_is_served(tmp_path) -> None:  # type: ignore[no-untyped-
     assert (ov["open_alerts"], ov["open_warnings"]) == (1, 1)
     assert ov["top_hosts"][0]["ip"] == BOT
     assert client.get(f"/api/graph/{SENSOR}", headers=h).json()["graph"]["total_nodes"] == 10
+
+
+def test_readiness_request_ids_and_metrics(client: TestClient, store: Store) -> None:
+    from prometheus_client import REGISTRY
+
+    assert client.get("/api/ready").json() == {"status": "ready"}
+    r = client.get("/api/alerts/1", headers={"X-Request-ID": "trace-123"})
+    assert r.headers["x-request-id"] == "trace-123"
+    generated = client.get("/api/health").headers["x-request-id"]
+    assert len(generated) == 32
+    # A malformed id from outside is replaced, not echoed into logs and headers.
+    assert (
+        client.get("/api/health", headers={"X-Request-ID": "bad id\n"}).headers["x-request-id"]
+        != "bad id\n"
+    )
+
+    before = (
+        REGISTRY.get_sample_value(
+            "botgraph_api_requests_total",
+            {"method": "GET", "route": "/api/alerts/{alert_id}", "status": "401"},
+        )
+        or 0
+    )
+    client.get("/api/alerts/2")
+    after = REGISTRY.get_sample_value(
+        "botgraph_api_requests_total",
+        {"method": "GET", "route": "/api/alerts/{alert_id}", "status": "401"},
+    )
+    assert after == before + 1  # labelled by route template, not by raw path
+
+    failures = REGISTRY.get_sample_value("botgraph_api_logins_total", {"result": "failure"}) or 0
+    client.post("/api/auth/login", json={"username": "viv", "password": "wrong-password"})
+    assert REGISTRY.get_sample_value("botgraph_api_logins_total", {"result": "failure"}) == (
+        failures + 1
+    )
+
+    broken = Store.__new__(Store)  # a store whose database is down
+    broken.ping = lambda: False  # type: ignore[method-assign]
+    from botgraph_api.app import create_app
+
+    assert TestClient(create_app(broken, SECRET)).get("/api/ready").status_code == 503
+
+
+def test_drift_endpoints(client: TestClient, store: Store) -> None:
+    viewer = _auth(client, "viv")
+    assert client.get("/api/drift", headers=viewer).json() == []
+    versus = {
+        "features": {"periodicity": 0.4, "dst_entropy": 0.02},
+        "max_feature": "periodicity",
+        "max_psi": 0.4,
+        "score_psi": 0.1,
+    }
+    for i, extra in enumerate(({}, {"training": {**versus, "max_psi": 0.9}})):
+        store.record_drift(
+            {
+                "sensor_id": "lab",
+                "window_start": T0 + 600 * i,
+                "windows": 60,
+                "hosts": 120,
+                "baseline": versus,
+                **extra,
+            }
+        )
+    latest = client.get("/api/drift", headers=viewer).json()
+    assert len(latest) == 1 and latest[0]["window_start"] == T0 + 600
+    assert latest[0]["baseline"]["max_feature"] == "periodicity"
+    assert latest[0]["training"]["max_psi"] == 0.9
+    history = client.get("/api/drift/lab", headers=viewer).json()
+    assert [p["baseline_psi"] for p in history] == [0.4, 0.4]
+    assert [p["training_psi"] for p in history] == [None, 0.9]

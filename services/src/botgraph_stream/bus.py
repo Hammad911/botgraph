@@ -14,6 +14,7 @@ Messages are JSON objects. Topics carry the pipeline stages:
 from __future__ import annotations
 
 import json
+import os
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -80,6 +81,20 @@ class LocalBus:
         self._queues.clear()
 
 
+# Broker security from the environment (Kubernetes secrets), passed to librdkafka unchanged.
+_SECURITY_ENV = {
+    "BOTGRAPH_KAFKA_SECURITY_PROTOCOL": "security.protocol",  # SASL_SSL, SSL, ...
+    "BOTGRAPH_KAFKA_SASL_MECHANISM": "sasl.mechanisms",  # SCRAM-SHA-512, PLAIN, ...
+    "BOTGRAPH_KAFKA_SASL_USERNAME": "sasl.username",
+    "BOTGRAPH_KAFKA_SASL_PASSWORD": "sasl.password",
+    "BOTGRAPH_KAFKA_SSL_CA_LOCATION": "ssl.ca.location",
+}
+
+
+def security_config() -> dict[str, str]:
+    return {key: os.environ[env] for env, key in _SECURITY_ENV.items() if os.environ.get(env)}
+
+
 class KafkaBus:
     """Kafka/Redpanda transport.
 
@@ -102,8 +117,10 @@ class KafkaBus:
         self.group_id = group_id
         self.prefix = prefix
         self.auto_offset_reset = auto_offset_reset
+        self._security = security_config()
         self._producer = Producer(
             {
+                **self._security,
                 "bootstrap.servers": bootstrap,
                 "client.id": f"botgraph-{group_id}",
                 "enable.idempotence": True,
@@ -121,7 +138,7 @@ class KafkaBus:
         from confluent_kafka import KafkaException
         from confluent_kafka.admin import AdminClient, NewTopic
 
-        admin = AdminClient({"bootstrap.servers": self.bootstrap})
+        admin = AdminClient({**self._security, "bootstrap.servers": self.bootstrap})
         futures = admin.create_topics(
             [
                 NewTopic(self._name(t), num_partitions=partitions, replication_factor=1)
@@ -151,6 +168,7 @@ class KafkaBus:
 
             consumer = Consumer(
                 {
+                    **self._security,
                     "bootstrap.servers": self.bootstrap,
                     "group.id": f"{self.group_id}.{topic}",
                     "auto.offset.reset": self.auto_offset_reset,
@@ -174,6 +192,18 @@ class KafkaBus:
             key = msg.key()
             out.append(Message(topic, key.decode() if key else "", decode(msg.value())))
         return out
+
+    def lag(self, topic: str) -> int:
+        """Messages on ``topic`` not yet consumed by this group (its assigned partitions)."""
+        consumer = self._consumers.get(topic)
+        if consumer is None:
+            return 0
+        total = 0
+        for tp in consumer.position(consumer.assignment()):
+            low, high = consumer.get_watermark_offsets(tp, timeout=5)
+            # A negative position means nothing was consumed yet: everything retained is lag.
+            total += max(high - (tp.offset if tp.offset >= 0 else low), 0)
+        return total
 
     def flush(self) -> None:
         self._producer.flush(30)
