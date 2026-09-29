@@ -14,6 +14,7 @@ COPY ml/pyproject.toml ml/pyproject.toml
 COPY ml/src ml/src
 COPY ml/labels ml/labels
 COPY services services
+COPY api api
 RUN uv sync --frozen --no-dev
 
 RUN useradd --create-home botgraph && mkdir -p /app/data && chown botgraph /app/data
