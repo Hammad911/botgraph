@@ -38,6 +38,7 @@ from botgraph_stream.store import Store
 OPEN = ("open", "investigating")
 HOUR = 3600.0
 RECENT_S = 15 * 60.0
+AUTH_TIMEOUT_S = 5.0
 
 
 def create_app(store: Store, secret: str, poll_interval_s: float = 2.0) -> FastAPI:
@@ -206,17 +207,32 @@ def create_app(store: Store, secret: str, poll_interval_s: float = 2.0) -> FastA
     # ------------------------------------------------------------------ live updates
 
     @app.websocket("/api/ws")
-    async def live(ws: WebSocket, token: str = "") -> None:
+    async def live(ws: WebSocket) -> None:
         """Pushes {"type": "alert", "alert": ...} and {"type": "window", ...} as the store
-        changes. Browsers cannot set headers on WebSockets, so the token is a query param."""
-        if read_token(secret, token) is None:
-            await ws.close(code=4401)
-            return
-        await ws.accept()
+        changes.
+
+        Protocol: the client's first message must be {"type": "auth", "token": "<jwt>"} within
+        5 s; the server answers {"type": "ready"} or closes with 4401. The token is never put in
+        the URL, where it would end up in access logs, proxies and browser history.
+        """
+        # Take the cursors *before* accepting: anything recorded once the client sees the
+        # connection open is then guaranteed to be newer and pushed (no race on connect).
         last_id = await asyncio.to_thread(store.max_alert_id)
         seen_windows: dict[str, float | None] = {
             s.id: s.last_window_start for s in await asyncio.to_thread(store.sensors)
         }
+        await ws.accept()
+        try:
+            hello = await asyncio.wait_for(ws.receive_json(), timeout=AUTH_TIMEOUT_S)
+        except (TimeoutError, WebSocketDisconnect, ValueError):
+            hello = None
+        token = (
+            hello.get("token") if isinstance(hello, dict) and hello.get("type") == "auth" else None
+        )
+        if not isinstance(token, str) or read_token(secret, token) is None:
+            await ws.close(code=4401)
+            return
+        await ws.send_json({"type": "ready"})
         try:
             while True:
                 await asyncio.sleep(poll_interval_s)

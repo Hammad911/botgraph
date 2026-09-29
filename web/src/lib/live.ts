@@ -28,13 +28,16 @@ export function useLive(token: string | null, onAlert?: (a: Alert) => void): Liv
 
     const connect = () => {
       setState("connecting");
-      socket = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
-      socket.onopen = () => {
-        retry = 0;
-        setState("live");
-      };
+      // The token goes in the first message, never the URL (URLs end up in logs).
+      socket = new WebSocket(WS_URL);
+      socket.onopen = () => socket?.send(JSON.stringify({ type: "auth", token }));
       socket.onmessage = (msg) => {
-        const event = JSON.parse(msg.data) as LiveEvent;
+        const event = JSON.parse(msg.data) as LiveEvent | { type: "ready" };
+        if (event.type === "ready") {
+          retry = 0;
+          setState("live");
+          return;
+        }
         if (event.type === "alert") {
           const parsed = Alert.safeParse(event.alert);
           if (parsed.success) onAlert?.(parsed.data);

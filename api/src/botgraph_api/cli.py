@@ -9,11 +9,13 @@ from __future__ import annotations
 import argparse
 import getpass
 import os
+from pathlib import Path
 
 import uvicorn
 
 from botgraph_api.app import create_app
 from botgraph_api.auth import load_secret
+from botgraph_api.seed import seed
 from botgraph_ml.config import repo_path
 from botgraph_stream.cli import default_db_url
 from botgraph_stream.store import ROLES, Store
@@ -32,6 +34,14 @@ def cmd_create_user(args: argparse.Namespace) -> None:
     password = args.password or getpass.getpass(f"password for {args.username}: ")
     user = _store(args).create_user(args.username, password, args.role)
     print(f"created {user.role} {user.username}")
+
+
+def cmd_seed_demo(args: argparse.Namespace) -> None:
+    if args.fresh and args.db and args.db.startswith("sqlite:///"):
+        for suffix in ("", "-wal", "-shm"):
+            Path(args.db.removeprefix("sqlite:///") + suffix).unlink(missing_ok=True)
+    seed(_store(args), args.username, args.password)
+    print(f"seeded demo data and {args.username} into {args.db or 'the default store'}")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -53,6 +63,12 @@ def main(argv: list[str] | None = None) -> None:
     user.add_argument("--role", choices=ROLES, default="analyst")
     user.add_argument("--password", help="omit to be prompted (keeps it out of shell history)")
     user.set_defaults(func=cmd_create_user)
+
+    demo = sub.add_parser("seed-demo", help="synthetic demo data + an admin (UI dev, e2e tests)")
+    demo.add_argument("--username", default="demo")
+    demo.add_argument("--password", required=True)
+    demo.add_argument("--fresh", action="store_true", help="delete the SQLite file first")
+    demo.set_defaults(func=cmd_seed_demo)
 
     args = parser.parse_args(argv)
     args.func(args)

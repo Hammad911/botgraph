@@ -16,7 +16,7 @@ function Legend() {
     <div className="flex flex-wrap items-center gap-4 text-xs text-ink-2">
       <span className="flex items-center gap-1.5">
         {swatch("var(--critical)")}
-        <AlertOctagon className="size-3.5 text-critical" aria-hidden /> Flagged host
+        <AlertOctagon className="size-3.5 text-critical" aria-hidden /> Above threshold this window
       </span>
       <span className="flex items-center gap-1.5">
         <span
@@ -71,6 +71,7 @@ export default function MapPage() {
             {graph.data
               ? `Window starting ${eventTime(graph.data.window_start)} · showing ${snap!.nodes.length} of ${snap!.total_nodes.toLocaleString("en")} hosts`
               : "The latest 5-minute communication graph, redrawn every minute"}
+            {graph.data && " · red = above threshold in this window (an alert needs 12 of 15)"}
           </p>
         </div>
         <label className="flex items-center gap-2 text-xs text-ink-2">
@@ -136,7 +137,9 @@ export default function MapPage() {
                     className="flex w-full items-center justify-between gap-2 py-1.5 text-left text-sm hover:bg-surface-2"
                   >
                     <span className="flex items-center gap-1.5">
-                      {n.flagged && <AlertOctagon className="size-3.5 text-critical" aria-label="flagged" />}
+                      {n.flagged && (
+                        <AlertOctagon className="size-3.5 text-critical" aria-label="above threshold this window" />
+                      )}
                       {n.id}
                     </span>
                     <RiskBar value={n.score} />

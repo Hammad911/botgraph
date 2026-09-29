@@ -168,31 +168,61 @@ def test_overview_host_and_graph(client: TestClient) -> None:
     assert client.get("/api/graph/nope", headers=h).status_code == 404
 
 
+def _ws_token(client: TestClient) -> str:
+    return client.post(
+        "/api/auth/login", json={"username": "viv", "password": "viv-password"}
+    ).json()["access_token"]
+
+
+def _ws_auth(ws, token: str) -> None:  # type: ignore[no-untyped-def]
+    """The token goes in the first message, never the URL."""
+    ws.send_json({"type": "auth", "token": token})
+    assert ws.receive_json() == {"type": "ready"}
+
+
+def test_websocket_rejects_missing_or_bad_auth(client: TestClient) -> None:
+    for first_message in ({"type": "auth", "token": "bad"}, {"hello": "no auth message"}):
+        with pytest.raises(WebSocketDisconnect), client.websocket_connect("/api/ws") as ws:
+            ws.send_json(first_message)
+            ws.receive_json()
+
+
 def test_websocket_does_not_replay_history_from_older_captures(
     client: TestClient, store: Store
 ) -> None:
     # A replay of an *older* capture inserts alerts with higher ids but earlier traffic time.
     store.record_event(_alert("10.0.0.77", T0 - 86400 * 365))
-    token = client.post(
-        "/api/auth/login", json={"username": "viv", "password": "viv-password"}
-    ).json()["access_token"]
-    with client.websocket_connect(f"/api/ws?token={token}") as ws:
+    with client.websocket_connect("/api/ws") as ws:
+        _ws_auth(ws, _ws_token(client))
         store.record_event(_alert("10.0.0.88", T0 - 86400 * 400))  # truly new, even older traffic
         message = ws.receive_json()
     assert message["type"] == "alert" and message["alert"]["ip"] == "10.0.0.88"
 
 
 def test_websocket_pushes_new_alerts_and_windows(client: TestClient, store: Store) -> None:
-    with pytest.raises(WebSocketDisconnect), client.websocket_connect("/api/ws?token=bad") as ws:
-        ws.receive_json()
-
-    token = client.post(
-        "/api/auth/login", json={"username": "viv", "password": "viv-password"}
-    ).json()["access_token"]
-    with client.websocket_connect(f"/api/ws?token={token}") as ws:
+    with client.websocket_connect("/api/ws") as ws:
+        _ws_auth(ws, _ws_token(client))
         store.record_event(_alert("10.0.0.99", T0 + 60 * 30))
         store.record_window(_window(30, {"10.0.0.99": 0.97}))
         messages = [ws.receive_json(), ws.receive_json()]
     kinds = {m["type"]: m for m in messages}
     assert kinds["alert"]["alert"]["ip"] == "10.0.0.99"  # only new alerts, not history
     assert kinds["window"] == {"type": "window", "sensor_id": "lab", "window_start": T0 + 60 * 30}
+
+
+def test_seed_demo_data_is_served(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from botgraph_api.seed import BOT, SENSOR, seed
+
+    store = Store(f"sqlite:///{tmp_path / 'demo.db'}")
+    seed(store, "demo", "demo-password")
+    client = TestClient(create_app(store, SECRET))
+    h = {
+        "Authorization": "Bearer "
+        + client.post(
+            "/api/auth/login", json={"username": "demo", "password": "demo-password"}
+        ).json()["access_token"]
+    }
+    ov = client.get("/api/overview", headers=h).json()
+    assert (ov["open_alerts"], ov["open_warnings"]) == (1, 1)
+    assert ov["top_hosts"][0]["ip"] == BOT
+    assert client.get(f"/api/graph/{SENSOR}", headers=h).json()["graph"]["total_nodes"] == 10

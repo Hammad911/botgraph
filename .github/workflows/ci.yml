@@ -72,3 +72,36 @@ jobs:
           BOTGRAPH_KAFKA_BOOTSTRAP: localhost:19092
           BOTGRAPH_TEST_DB_URL: postgresql+psycopg://botgraph:botgraph@localhost:5432/botgraph
         run: uv run pytest -m kafka services -rs
+
+  web:
+    # Analyst console: lint, types, then Playwright end-to-end against a seeded API and a
+    # production build of the console.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv python install
+        working-directory: .
+      - run: uv sync
+        working-directory: .
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium
+      - name: End-to-end (login, alert explanation, triage, host timeline, live map)
+        run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: web/test-results/

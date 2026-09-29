@@ -7,7 +7,16 @@ import type Sigma from "sigma";
 import type { GraphSnapshot } from "@/lib/api";
 
 type Snapshot = GraphSnapshot["graph"];
-type NodeAttrs = { x: number; y: number; size: number; color: string; label: string; zIndex: number };
+const MAX_FORCED_LABELS = 8;
+type NodeAttrs = {
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  label: string;
+  zIndex: number;
+  forceLabel: boolean;
+};
 
 /** WebGL can't read CSS variables, so resolve the theme's tokens to concrete colours. */
 function palette() {
@@ -99,6 +108,14 @@ export function NetworkMap({
       if (!keep.has(id)) graph.dropNode(id);
     });
     const fresh = graph.order === 0;
+    // Force labels on only the few riskiest flagged hosts: more collide (the side table lists all).
+    const named = new Set(
+      snapshot.nodes
+        .filter((n) => n.flagged)
+        .sort((a, b) => b.score - a.score || b.degree - a.degree)
+        .slice(0, MAX_FORCED_LABELS)
+        .map((n) => n.id),
+    );
     for (const n of snapshot.nodes) {
       const attrs: NodeAttrs = {
         x: graph.hasNode(n.id) ? graph.getNodeAttribute(n.id, "x") : Math.random() * 100,
@@ -112,6 +129,7 @@ export function NetworkMap({
         // Labels only where they matter: flagged hosts and risky internal hosts.
         label: n.flagged || (n.internal && n.score > 0.5) ? n.id : "",
         zIndex: n.flagged ? 2 : n.internal ? 1 : 0,
+        forceLabel: named.has(n.id),
       };
       graph.mergeNode(n.id, attrs);
     }

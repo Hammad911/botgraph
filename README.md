@@ -5,9 +5,11 @@ host-to-host communication graph every minute and uses a GNN trained in-house to
 hosts. It targets the coordinated behaviour that per-flow detectors miss: C2 beaconing,
 fan-out scanning and peer-to-peer bot meshes.
 
-> Status: **Phases 0–4 done.** Three GNNs trained and evaluated on all 13 CTU-13 scenarios
-> (leave-one-family-out CV) and on IoT-23 without retraining, plus a live detection pipeline
-> (`botgraph run`). The web console comes next. See the [model card](docs/model_card.md).
+> Status: **Phases 0–5 done.** Three GNNs trained and evaluated on all 13 CTU-13 scenarios
+> (leave-one-family-out CV) and on IoT-23 without retraining, a live detection pipeline
+> (`botgraph run`), and an analyst console. See the [model card](docs/model_card.md).
+
+![Alert explanation in the BotGraph console](docs/img/alert-explanation.png)
 
 ## Results
 
@@ -197,6 +199,35 @@ Flows are keyed by sensor, so each network segment stays on one Kafka partition 
 scale out by partition. Prometheus metrics (`--metrics-port`): flows ingested/rejected, windows
 scored, per-window latency, alert events.
 
+## Analyst console
+
+A FastAPI backend (`api/`) and a Next.js console (`web/`) on top of the live pipeline's store.
+
+| | |
+|---|---|
+| ![Overview](docs/img/overview.png) | ![Live map](docs/img/live-map.png) |
+| **Overview**: open alerts and warnings, 24 h trend, riskiest hosts | **Live map**: the latest 5-minute graph, redrawn every minute (Sigma.js/WebGL) |
+| ![Alert explanation](docs/img/alert-explanation.png) | ![Host timeline](docs/img/host-timeline.png) |
+| **Alert**: why it fired, in plain words, plus triage | **Host**: score over time against the threshold, with alerts |
+
+```bash
+uv run botgraph run --replay ctu13:12 --speed 60             # 1. feed the store
+uv run botgraph-api create-user --username you --role admin  # 2. an account
+uv run botgraph-api serve                                     #    API on :8000
+cd web && npm install && npm run dev                          # 3. console on :3000
+```
+
+- **Roles:** viewer (read), analyst (triage), admin (recalibrate sensors). JWT auth; the
+  WebSocket authenticates with its first message, so tokens never appear in URLs or logs.
+- **Live:** new alerts and windows are pushed over a WebSocket; a toast announces new alerts.
+- **Explanations** use Integrated Gradients on the model's logit: flagged hosts score ~1.000,
+  where probability-based explainers (GNNExplainer) return nothing. The alert above reads as
+  136 connections to 136 different hosts, 96% outgoing: the peer-to-peer bot NSIS.ay.
+- **Charts** follow a validated palette: status colours always carry an icon and label, risk
+  uses a single-hue ramp, and every chart has a table view.
+- **Tests:** API tests (auth, roles, triage, WebSocket push and races) and Playwright
+  end-to-end tests against a seeded store and a production build (`cd web && npm run e2e`).
+
 ## Data and model pipeline
 
 Each step is a module CLI and a [DVC](https://dvc.org) stage (`dvc.yaml`, parameters in
@@ -271,7 +302,7 @@ host-level alert outcomes (bots and normal hosts alerted, time to alert) per bot
       leave-one-family-out CV, alert-rule tuning
 - [x] Phase 4: live pipeline: streaming windows, detector, two-level alerts, learning mode,
       explanations, replay, Kafka/Postgres services, Docker, metrics
-- [ ] Phase 5: FastAPI + Next.js analyst console
+- [x] Phase 5: FastAPI + Next.js analyst console (live map, triage, explanations, e2e tests)
 - [ ] Phase 6: observability, drift monitoring, security hardening, Helm
 - [ ] Phase 7: demo, write-up ([model card](docs/model_card.md) done)
 
