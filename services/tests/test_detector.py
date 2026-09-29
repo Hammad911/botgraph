@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pytest
 import torch
-from conftest import INTERNAL, synthetic_flows
+from stream_fixtures import INTERNAL, synthetic_flows
 
 from botgraph_core import GraphConfig, WindowSpec, build_window_graph, sliding_windows
 from botgraph_ml.gnn.data import to_data
