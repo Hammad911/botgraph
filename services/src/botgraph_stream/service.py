@@ -20,6 +20,7 @@ from botgraph_core import FLOW_COLUMNS, FLOW_DTYPES
 from botgraph_stream.alerts import AlertEngine
 from botgraph_stream.bus import ALERTS, DETECTIONS, FLOWS, Bus
 from botgraph_stream.detector import Detector
+from botgraph_stream.metrics import ALERT_EVENTS, WINDOW_LATENCY, WINDOWS_SCORED
 from botgraph_stream.store import Store
 
 
@@ -47,6 +48,8 @@ class DetectorService:
 
     def _handle(self, detection: dict[str, Any]) -> None:
         sensor = str(detection["sensor_id"])
+        WINDOWS_SCORED.labels(sensor).inc()
+        WINDOW_LATENCY.observe(detection["latency_ms"] / 1000)
         self.bus.publish(DETECTIONS, sensor, detection)
         if self.store is not None:
             self.store.record_window(detection)
@@ -56,6 +59,7 @@ class DetectorService:
                     sensor, event["window_id"], event["ip"], self.explain_epochs
                 )
             self.stats.events[event["type"]] = self.stats.events.get(event["type"], 0) + 1
+            ALERT_EVENTS.labels(event["type"]).inc()
             if event["type"] in ("warning", "alert"):
                 self.stats.last_alert = event
             if self.store is not None:

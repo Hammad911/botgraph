@@ -17,6 +17,7 @@ from pydantic import ValidationError
 
 from botgraph_core import FlowRecord
 from botgraph_stream.bus import DLQ, FLOWS, FLOWS_RAW, Bus
+from botgraph_stream.metrics import FLOWS_INGESTED
 
 MAX_ERROR_CHARS = 300
 
@@ -50,6 +51,8 @@ def ingest_step(bus: Bus, stats: IngestStats, max_messages: int = 100, timeout: 
         stats.flows_in += len(flows)
         stats.flows_ok += len(good)
         stats.flows_rejected += len(bad)
+        FLOWS_INGESTED.labels("ok").inc(len(good))
+        FLOWS_INGESTED.labels("rejected").inc(len(bad))
         if good:
             bus.publish(FLOWS, sensor, {"sensor_id": sensor, "flows": good})
         if bad:

@@ -5,9 +5,9 @@ host-to-host communication graph every minute and uses a GNN trained in-house to
 hosts. It targets the coordinated behaviour that per-flow detectors miss: C2 beaconing,
 fan-out scanning and peer-to-peer bot meshes.
 
-> Status: **Phases 0–3 done.** Data pipeline, XGBoost baseline and three GNNs are trained and
-> evaluated on all 13 CTU-13 scenarios with leave-one-family-out cross-validation. Streaming
-> services and the web console come next. See the [model card](docs/model_card.md).
+> Status: **Phases 0–4 done.** Three GNNs trained and evaluated on all 13 CTU-13 scenarios
+> (leave-one-family-out CV) and on IoT-23 without retraining, plus a live detection pipeline
+> (`botgraph run`). The web console comes next. See the [model card](docs/model_card.md).
 
 ## Results
 
@@ -113,9 +113,9 @@ features the model sees in production match what it was trained on.
 |---|---|
 | `packages/botgraph-core` | Flow schema, dataset adapters, windowing, graph features |
 | `ml/` | Data prep, labels, models, training and evaluation |
-| `services/` | ingest, graph-builder, inference, API *(planned)* |
+| `services/` | Live pipeline: ingest, streaming windows, detector, alerts, replay (`botgraph` CLI) |
 | `web/` | Next.js analyst console *(planned)* |
-| `deploy/compose` | Local infrastructure: Redpanda, Postgres, ClickHouse, Redis, MLflow |
+| `deploy/` | Dockerfile; compose with Redpanda, Postgres, ClickHouse, Redis, MLflow + pipeline services |
 
 ## Quick start
 
@@ -138,6 +138,55 @@ for window in sliding_windows(flows, WindowSpec(size_s=300, hop_s=60)):
     graph = build_window_graph(window.flows, window.window_id)
     print(window.window_id, graph.num_nodes, graph.num_edges)
 ```
+
+## Live detection pipeline
+
+```
+flows.raw ──▶ ingest ──▶ flows.normalized ──▶ detector ──▶ detections / alerts ──▶ SQLite / Postgres
+ (replay,     validate,                        5-min windows every minute,
+  Zeek...)    bad rows → flows.dlq             graph → GATv2 → k-of-n alerts,
+                                               learning mode, explanations
+```
+
+**Run the demo on your laptop** (no broker or Docker needed; in-process bus + SQLite):
+
+```bash
+uv run botgraph run --replay ctu13:6 --fresh     # Menti: a botnet family the model never saw
+uv run botgraph run --replay iot23:CTU-IoT-Malware-Capture-34-1 --speed 600   # Mirai, 60-min learning
+uv run botgraph alerts                           # alerts with their explanations
+```
+
+The replay streams a recorded capture with **labels stripped**; the pipeline never sees ground
+truth. A live terminal view shows windows scored, warnings, alerts and recent events, and the
+run ends with a summary scored against the hidden labels.
+
+- **Streaming windows** use event time with a watermark and allowed lateness; on in-order input
+  they are identical to the batch windows used in training (randomised property tests).
+- **Alerts** at two levels: *warning* (flagged in 3 of the last 5 windows) and *alert* (12 of
+  15). Alert times match the offline evaluation exactly (tested).
+- **Learning mode**: a new network is observed first (default 60 min); the threshold becomes
+  the 95th percentile of its baseline scores, the calibration validated on IoT-23. Thresholds
+  are stored, so a restart does not relearn; `botgraph recalibrate` starts over.
+- **Explanations** (GNNExplainer) are computed on the host's 2-hop neighbourhood, which gives
+  exactly the model's score for a 2-layer GNN at a fraction of the cost.
+- Quiet networks are handled: windows need only 1 flow (a lone beacon still gets scored).
+
+**As separate services over Kafka/Redpanda + Postgres** (the same code; verified in CI against a
+real broker):
+
+```bash
+docker compose -f deploy/compose/docker-compose.yml --profile pipeline up -d
+docker compose -f deploy/compose/docker-compose.yml --profile pipeline run --rm replay \
+    replay --replay ctu13:6 --speed 60
+# or without Docker for the services themselves:
+uv run botgraph ingest --metrics-port 9101
+uv run botgraph detect --internal-nets 147.32.0.0/16 --learning-minutes 0 --metrics-port 9102
+uv run botgraph replay --replay ctu13:6 --speed 60
+```
+
+Flows are keyed by sensor, so each network segment stays on one Kafka partition and detectors
+scale out by partition. Prometheus metrics (`--metrics-port`): flows ingested/rejected, windows
+scored, per-window latency, alert events.
 
 ## Data and model pipeline
 
@@ -210,7 +259,8 @@ host-level alert outcomes (bots and normal hosts alerted, time to alert) per bot
 - [x] Phase 2: graph construction, XGBoost baseline, evaluation harness
 - [x] Phase 3: GraphSAGE / E-GraphSAGE / GATv2, HPO, explainability, MLflow tracking,
       leave-one-family-out CV, alert-rule tuning
-- [ ] Phase 4: streaming pipeline (ingest → graph-builder → inference) + replay tool
+- [x] Phase 4: live pipeline: streaming windows, detector, two-level alerts, learning mode,
+      explanations, replay, Kafka/Postgres services, Docker, metrics
 - [ ] Phase 5: FastAPI + Next.js analyst console
 - [ ] Phase 6: observability, drift monitoring, security hardening, Helm
 - [ ] Phase 7: demo, write-up ([model card](docs/model_card.md) done)

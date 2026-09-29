@@ -39,6 +39,7 @@ from botgraph_stream.alerts import AlertEngine
 from botgraph_stream.bus import ALERTS, DETECTIONS, DLQ, FLOWS, FLOWS_RAW, Bus, KafkaBus, LocalBus
 from botgraph_stream.detector import Detector
 from botgraph_stream.ingest import IngestStats, ingest_step
+from botgraph_stream.metrics import serve_metrics
 from botgraph_stream.replay import Replayer, ReplaySource, load_source
 from botgraph_stream.service import DetectorService
 from botgraph_stream.store import Store
@@ -290,6 +291,8 @@ def cmd_replay(args: argparse.Namespace) -> None:
 
 
 def cmd_ingest(args: argparse.Namespace) -> None:
+    if args.metrics_port:
+        serve_metrics(args.metrics_port)
     bus, stats = _kafka(args, "ingest"), IngestStats()
     console.print(f"ingest: {bus.bootstrap} {args.topic_prefix}{FLOWS_RAW} -> {FLOWS}")
     serve(lambda: ingest_step(bus, stats, timeout=1.0), args.idle_exit)
@@ -298,6 +301,8 @@ def cmd_ingest(args: argparse.Namespace) -> None:
 
 
 def cmd_detect(args: argparse.Namespace) -> None:
+    if args.metrics_port:
+        serve_metrics(args.metrics_port)
     params = load_params()
     bus = _kafka(args, "detector")
     nets = tuple(n.strip() for n in args.internal_nets.split(","))
@@ -429,6 +434,7 @@ def main(argv: list[str] | None = None) -> None:
     def kafka_args(p: argparse.ArgumentParser) -> argparse.ArgumentParser:
         p.add_argument("--bootstrap", help="Kafka bootstrap servers (env BOTGRAPH_KAFKA_BOOTSTRAP)")
         p.add_argument("--topic-prefix", default="", help="namespace for topic names")
+        p.add_argument("--metrics-port", type=int, help="serve Prometheus /metrics on this port")
         return p
 
     rep = kafka_args(sub.add_parser("replay", help="publish a recorded capture to flows.raw"))
