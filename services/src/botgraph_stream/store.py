@@ -40,7 +40,7 @@ from sqlalchemy import (
     inspect,
     select,
 )
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 DEFAULT_URL = "sqlite:///botgraph.db"
@@ -201,6 +201,10 @@ def _sqlite_pragmas(engine: Engine) -> None:
 class Store:
     def __init__(self, url: str | None = None, host_score_retention_s: float = 7 * 86400) -> None:
         self.url = url or os.environ.get("BOTGRAPH_DB_URL", DEFAULT_URL)
+        parsed = make_url(self.url)
+        if parsed.get_backend_name() == "sqlite" and parsed.database not in (None, "", ":memory:"):
+            # SQLite creates the file but not missing folders (e.g. a fresh checkout's data/).
+            Path(parsed.database).parent.mkdir(parents=True, exist_ok=True)
         self.engine = create_engine(self.url)
         if self.engine.dialect.name == "sqlite":
             _sqlite_pragmas(self.engine)

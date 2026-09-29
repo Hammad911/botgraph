@@ -4,7 +4,8 @@ import { defineConfig } from "@playwright/test";
 // the console. Ports are separate from the usual dev servers (8000 / 3000).
 const API_PORT = 8010;
 const WEB_PORT = 3010;
-const DB = "sqlite:///data/e2e.db"; // relative to the repo root (the API server's cwd)
+// Relative to the repo root (the API server's cwd). A fresh checkout has no data/ yet.
+const DB = process.env.E2E_DB_URL ?? "sqlite:///data/e2e.db";
 export const E2E_USER = { username: "demo", password: "e2e-password-123" };
 
 export default defineConfig({

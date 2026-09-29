@@ -116,3 +116,10 @@ def test_users_and_passwords(tmp_path) -> None:  # type: ignore[no-untyped-def]
         store.create_user("x", "short", "admin")
     with pytest.raises(ValueError):
         store.create_user("y", "long-enough", "root")
+
+
+def test_sqlite_parent_directories_are_created(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    # A fresh checkout has no data/ directory (it is gitignored); CI's e2e run hit this.
+    store = Store(f"sqlite:///{tmp_path / 'not' / 'yet' / 'there.db'}")
+    assert store.summary()["windows"] == 0
+    assert (tmp_path / "not" / "yet" / "there.db").exists()
