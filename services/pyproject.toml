@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Live BotGraph pipeline: ingest, streaming windows, GNN detection, alerting, replay"
 requires-python = ">=3.11"
 dependencies = [
+    "alembic>=1.13",
     "botgraph-core",
     "botgraph-ml",
     "confluent-kafka>=2.5",

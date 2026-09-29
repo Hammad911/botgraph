@@ -26,6 +26,7 @@ import torch
 from torch_geometric.data import Data
 
 from botgraph_core import (
+    EDGE_FEATURES,
     NODE_FEATURES,
     GraphConfig,
     Window,
@@ -72,6 +73,71 @@ def ego_graph(graph: WindowGraph, ip: str, hops: int) -> tuple[WindowGraph, int]
         y=graph.y[keep],
     )
     return sub, int(new_index[graph.nodes.index(ip)])
+
+
+_FLOWS = EDGE_FEATURES.index("log_flows")
+_BYTES = EDGE_FEATURES.index("log_bytes")
+_PERIODICITY = EDGE_FEATURES.index("periodicity")
+
+
+def graph_snapshot(
+    graph: WindowGraph,
+    scores: np.ndarray,
+    threshold: float,
+    focus: int = 60,
+    max_nodes: int = 300,
+    max_edges: int = 800,
+) -> dict[str, Any]:
+    """A compact, drawable view of one window for the live map.
+
+    A busy window has thousands of hosts; the map shows the ``focus`` riskiest internal hosts
+    (every flagged host first) and their busiest flows, capped at ``max_nodes`` / ``max_edges``.
+    """
+    internal = graph.x[:, _INTERNAL] == 1.0
+    candidates = np.flatnonzero(internal)
+    ranked = candidates[np.argsort(-scores[candidates], kind="stable")][:focus]
+    in_focus = np.zeros(graph.num_nodes, dtype=bool)
+    in_focus[ranked] = True
+
+    src, dst = graph.edge_index
+    touching = np.flatnonzero(in_focus[src] | in_focus[dst])
+    order = touching[np.argsort(-graph.edge_attr[touching, _FLOWS], kind="stable")]
+    keep_nodes = in_focus.copy()
+    edges: list[int] = []
+    for e in order:
+        if len(edges) >= max_edges:
+            break
+        new = int(not keep_nodes[src[e]]) + int(not keep_nodes[dst[e]])
+        if keep_nodes.sum() + new > max_nodes:
+            continue
+        keep_nodes[src[e]] = keep_nodes[dst[e]] = True
+        edges.append(int(e))
+
+    degree = np.bincount(np.concatenate([src, dst]), minlength=graph.num_nodes)
+    return {
+        "nodes": [
+            {
+                "id": graph.nodes[i],
+                "score": round(float(scores[i]), 4),
+                "internal": bool(internal[i]),
+                "flagged": bool(internal[i] and scores[i] >= threshold),
+                "degree": int(degree[i]),
+            }
+            for i in np.flatnonzero(keep_nodes)
+        ],
+        "edges": [
+            {
+                "source": graph.nodes[int(src[e])],
+                "target": graph.nodes[int(dst[e])],
+                "flows": round(float(np.expm1(graph.edge_attr[e, _FLOWS]))),
+                "bytes": round(float(np.expm1(graph.edge_attr[e, _BYTES]))),
+                "periodicity": round(float(graph.edge_attr[e, _PERIODICITY]), 3),
+            }
+            for e in edges
+        ],
+        "total_nodes": graph.num_nodes,
+        "total_edges": graph.num_edges,
+    }
 
 
 class Detector:
@@ -135,6 +201,7 @@ class Detector:
             "n_edges": graph.num_edges,
             "latency_ms": round(latency_ms, 2),
             "hosts": hosts,
+            "graph": graph_snapshot(graph, scores, self.threshold),
         }
 
     def explain(

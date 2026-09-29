@@ -106,3 +106,21 @@ def test_ego_graph_keeps_the_exact_score(bundle_dir) -> None:  # type: ignore[no
         assert ego.nodes[node] == ip
         assert ego.num_nodes < graph.num_nodes
         assert float(s_ego) == pytest.approx(float(s_full), abs=1e-5)
+
+
+def test_graph_snapshot_is_compact_and_keeps_flagged_hosts(bundle_dir) -> None:  # type: ignore[no-untyped-def]
+    from botgraph_stream.detector import graph_snapshot
+
+    flows = synthetic_flows(np.random.default_rng(6), minutes=5)
+    graph = build_window_graph(flows, "0-300", CONFIG)
+    scores = np.linspace(0.0, 1.0, graph.num_nodes)
+    beacon = graph.nodes.index("10.0.0.66")
+    scores[beacon] = 0.999
+    snap = graph_snapshot(graph, scores, threshold=0.99, focus=3, max_nodes=8, max_edges=10)
+
+    ids = {n["id"] for n in snap["nodes"]}
+    assert len(snap["nodes"]) <= 8 and len(snap["edges"]) <= 10
+    assert "10.0.0.66" in ids
+    assert next(n for n in snap["nodes"] if n["id"] == "10.0.0.66")["flagged"]
+    assert all(e["source"] in ids and e["target"] in ids for e in snap["edges"])
+    assert snap["total_nodes"] == graph.num_nodes

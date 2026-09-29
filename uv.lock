@@ -386,6 +386,7 @@ name = "botgraph-stream"
 version = "0.1.0"
 source = { editable = "services" }
 dependencies = [
+    { name = "alembic" },
     { name = "botgraph-core" },
     { name = "botgraph-ml" },
     { name = "confluent-kafka" },
@@ -397,6 +398,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "alembic", specifier = ">=1.13" },
     { name = "botgraph-core", editable = "packages/botgraph-core" },
     { name = "botgraph-ml", editable = "ml" },
     { name = "confluent-kafka", specifier = ">=2.5" },
