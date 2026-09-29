@@ -47,7 +47,7 @@ stages:
 
   download_iot23:
     cmd: python -m botgraph_ml.download iot23
-    params: [iot23.url]
+    params: [iot23.base_url, iot23.captures]
     outs:
       - ml/data/raw/iot23:
           persist: true

@@ -1,0 +1,137 @@
+{
+  "rows": 21994,
+  "bot_rows": 11109,
+  "benign_rows": 10885,
+  "windows": 16105,
+  "captures": [
+    "CTU-Honeypot-Capture-4-1",
+    "CTU-Honeypot-Capture-5-1",
+    "CTU-Honeypot-Capture-7-1_Somfy-01",
+    "CTU-IoT-Malware-Capture-1-1",
+    "CTU-IoT-Malware-Capture-20-1",
+    "CTU-IoT-Malware-Capture-21-1",
+    "CTU-IoT-Malware-Capture-3-1",
+    "CTU-IoT-Malware-Capture-34-1",
+    "CTU-IoT-Malware-Capture-42-1",
+    "CTU-IoT-Malware-Capture-44-1",
+    "CTU-IoT-Malware-Capture-8-1"
+  ],
+  "models": {
+    "baseline": {
+      "threshold": 0.5167175531387329,
+      "window": {
+        "n": 21994,
+        "n_pos": 11109,
+        "precision": 0.4381637168141593,
+        "recall": 0.3565577459717346,
+        "f1": 0.39317087696659886,
+        "pr_auc": 0.47577147940883163,
+        "roc_auc": 0.37943465206942373,
+        "fpr_at_95_recall": 0.9934772622875516
+      },
+      "alerts": {
+        "warning": {
+          "bots_alerted": 9,
+          "bots_total": 9,
+          "benign_alerted": 16,
+          "benign_total": 22,
+          "median_time_to_alert_min": 3.0
+        },
+        "alert": {
+          "bots_alerted": 6,
+          "bots_total": 9,
+          "benign_alerted": 5,
+          "benign_total": 22,
+          "median_time_to_alert_min": 13.0
+        }
+      }
+    },
+    "graphsage": {
+      "threshold": 0.9982243180274963,
+      "window": {
+        "n": 21994,
+        "n_pos": 11109,
+        "precision": 0.722088248712768,
+        "recall": 0.9972994869025115,
+        "f1": 0.8376682292454257,
+        "pr_auc": 0.9741251265710389,
+        "roc_auc": 0.9667143174290851,
+        "fpr_at_95_recall": 0.33385392742305925
+      },
+      "alerts": {
+        "warning": {
+          "bots_alerted": 9,
+          "bots_total": 9,
+          "benign_alerted": 15,
+          "benign_total": 22,
+          "median_time_to_alert_min": 2.0
+        },
+        "alert": {
+          "bots_alerted": 8,
+          "bots_total": 9,
+          "benign_alerted": 5,
+          "benign_total": 22,
+          "median_time_to_alert_min": 11.0
+        }
+      }
+    },
+    "e_graphsage": {
+      "threshold": 0.9427434206008911,
+      "window": {
+        "n": 21994,
+        "n_pos": 11109,
+        "precision": 0.6315107998352069,
+        "recall": 0.965883517868395,
+        "f1": 0.7637010676156584,
+        "pr_auc": 0.9436109672274102,
+        "roc_auc": 0.9343990043455064,
+        "fpr_at_95_recall": 0.5166743224621038
+      },
+      "alerts": {
+        "warning": {
+          "bots_alerted": 9,
+          "bots_total": 9,
+          "benign_alerted": 15,
+          "benign_total": 22,
+          "median_time_to_alert_min": 4.0
+        },
+        "alert": {
+          "bots_alerted": 9,
+          "bots_total": 9,
+          "benign_alerted": 5,
+          "benign_total": 22,
+          "median_time_to_alert_min": 21.0
+        }
+      }
+    },
+    "gatv2": {
+      "threshold": 0.9615089893341064,
+      "window": {
+        "n": 21994,
+        "n_pos": 11109,
+        "precision": 0.633631675656452,
+        "recall": 0.9622828337384103,
+        "f1": 0.7641172265904217,
+        "pr_auc": 0.958729547056035,
+        "roc_auc": 0.9417385077165581,
+        "fpr_at_95_recall": 0.4860817638952687
+      },
+      "alerts": {
+        "warning": {
+          "bots_alerted": 9,
+          "bots_total": 9,
+          "benign_alerted": 13,
+          "benign_total": 22,
+          "median_time_to_alert_min": 4.0
+        },
+        "alert": {
+          "bots_alerted": 8,
+          "bots_total": 9,
+          "benign_alerted": 4,
+          "benign_total": 22,
+          "median_time_to_alert_min": 53.0
+        }
+      }
+    }
+  }
+}

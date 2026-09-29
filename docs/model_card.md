@@ -55,6 +55,25 @@ Rbot 0.901, Sogou 0.952, Virut 1.000. Full tables: `ml/reports/comparison.md`.
 
 Normal hosts are counted once per scenario, so 78 = 6 hosts × 13 scenarios.
 
+## Cross-dataset evaluation (IoT-23, no retraining)
+
+Models trained on CTU-13 were applied with unchanged weights and thresholds to 11 IoT-23
+captures (3 benign honeypots, 8 malware). Window labels come from per-flow labels: a host is a
+bot in a window if it originated a malicious flow, benign if it originated traffic and all its
+flows were benign. Hosts that only receive traffic (e.g. addresses a bot scanned) are unknown.
+Windows with at least 1 flow are scored (the honeypots are too quiet for CTU-13's minimum of 10).
+
+| Model | Window PR-AUC | Infected devices alerted | Benign devices alerted |
+|---|---|---|---|
+| XGBoost | 0.476 | 6/9 | 5/22 |
+| GATv2 | 0.959 | 8/9 | 4/22 |
+
+(12 of 15 rule.) Scanning botnets (Hide and Seek, Muhstik, Hakai, Mirai) are detected with
+PR-AUC 0.99–1.00. The false alerts are consumer IoT devices and routers whose periodic cloud
+heartbeats resemble C2 beaconing learned from CTU-13 PCs. Low-volume bots (Torii, a Trojan)
+are flagged for IoT-like behaviour, not for their malicious traffic, so those detections are
+not evidence of capability. Full report: `ml/reports/iot23/report.md`.
+
 ## Limitations
 
 - **Small normal population.** CTU-13 labels only 6 normal hosts, reused in every scenario.
@@ -71,9 +90,15 @@ Normal hosts are counted once per scenario, so 78 = 6 hosts × 13 scenarios.
 - **Recurring IP.** The main bot IP (147.32.84.165) recurs across scenarios. Features do not
   include IP addresses, but the same machine's baseline behaviour appears in train and test.
 
+- **Domain shift to IoT.** Periodic heartbeats of normal IoT devices look like C2 beaconing to
+  a model trained on PCs; expect false alerts on IoT-heavy networks without calibration.
+- **Quiet networks.** Training used windows with at least 10 flows; a lone, quietly beaconing
+  bot on a small network can fall below that. Live inference should not apply that minimum.
+
 ## Next validation steps
 
-1. Cross-dataset test on **IoT-23** (different network, device types and malware).
+1. Per-network calibration: learn thresholds or fine-tune on a short benign period of the
+   target network, then re-run the IoT-23 test.
 2. Traffic from a controlled lab with simulated C2 beacons and realistic benign load.
 3. False-alert rate per host-day on a larger benign population before any production use.
 

@@ -1,7 +1,7 @@
 """Download public datasets and extract only the flow files we need.
 
-    python -m botgraph_ml.download ctu13
-    python -m botgraph_ml.download iot23
+    python -m botgraph_ml.download ctu13     # one archive, flow files extracted
+    python -m botgraph_ml.download iot23     # individual captures listed in params.yaml
 
 Layout produced:
     ml/data/raw/ctu13/scenario=<N>/flows.binetflow
@@ -107,6 +107,18 @@ def iot23_target(path: PurePosixPath) -> Path | None:
 TARGETS = {"ctu13": ctu13_target, "iot23": iot23_target}
 
 
+def download_iot23(params: dict[str, object], out_dir: Path) -> list[Path]:
+    """Fetch each listed capture's labelled Zeek conn log directly (no archive)."""
+    cfg = params["iot23"]
+    assert isinstance(cfg, dict)
+    written = []
+    for capture in cfg["captures"]:
+        # "CTU-Honeypot-Capture-7-1/Somfy-01" -> local dir "CTU-Honeypot-Capture-7-1_Somfy-01"
+        target = out_dir / capture.replace("/", "_") / "conn.log.labeled"
+        written.append(download(f"{cfg['base_url']}/{capture}/bro/conn.log.labeled", target))
+    return written
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
@@ -119,6 +131,10 @@ def main(argv: list[str] | None = None) -> None:
 
     params = load_params()
     raw_dir = repo_path(params["data"]["raw_dir"])
+    if args.dataset == "iot23":
+        files = download_iot23(params, raw_dir / "iot23")
+        print(f"downloaded {len(files)} captures into {raw_dir / 'iot23'}")
+        return
     url: str = args.url or params[args.dataset]["url"]
     archive: Path = args.archive or raw_dir / "archives" / url.rsplit("/", 1)[-1]
     if not args.archive:

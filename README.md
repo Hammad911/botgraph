@@ -32,6 +32,37 @@ Two alert levels are planned for the live system, both measured on the same fold
 | Warning | 3 of last 5 min | 34/35 | 22/78 | 2 min |
 | Alert | 12 of last 15 min | 30/35 | 5/78 | 28 min |
 
+### Cross-dataset test: IoT-23, no retraining
+
+The CTU-13 models were applied unchanged (same weights and thresholds) to 11 IoT-23 captures:
+a different network, IoT devices instead of PCs, and different malware (Mirai, Hide and Seek,
+Muhstik, Hakai, Torii, a Trojan). Labels come from IoT-23's per-flow labels
+([`ml/reports/iot23/report.md`](ml/reports/iot23/report.md)).
+
+| Model | Window PR-AUC | Infected devices alerted (12 of 15) | Benign devices alerted (12 of 15) |
+|---|---|---|---|
+| XGBoost | 0.476 | 6/9 | 5/22 |
+| GraphSAGE | **0.974** | 8/9 | 5/22 |
+| E-GraphSAGE | 0.944 | 9/9 | 5/22 |
+| GATv2 | 0.959 | 8/9 | **4/22** |
+
+What transfers and what does not:
+
+- **Scanning botnets transfer almost perfectly.** On Hide and Seek, Muhstik, Hakai and Mirai
+  captures every GNN scores PR-AUC 0.99–1.00, while XGBoost on host features alone drops to
+  0.45–0.98. Fan-out scanning looks the same on any network, and the graph captures it.
+- **Normal IoT devices look like bots to a model trained on PCs.** The false alerts are a
+  Philips Hue, an Amazon Echo and home routers, flagged in 50–92% of their windows. IoT devices
+  heartbeat to cloud servers on a fixed schedule; on CTU-13's university PCs, that periodic
+  pattern almost always meant C2 beaconing.
+- **Stealthy, low-volume bots are not detected for the right reason.** Torii and the Trojan
+  (14–18 malicious flows a day) were flagged mostly in windows *without* malicious traffic,
+  i.e. for looking like IoT devices, not for their C2 traffic.
+
+**Takeaway:** detections of noisy botnet behaviour transfer across networks; the benign
+baseline does not. Deploying on a new kind of network needs a short calibration period on its
+normal traffic (per-network thresholds or fine-tuning on benign data) before alerts are trusted.
+
 **Limitations.** CTU-13 has only 6 labelled normal hosts (the same ones in every scenario), so
 the false-alert numbers come from a small population. The peer-to-peer family NSIS.ay is hard
 for every model (PR-AUC 0.30–0.42); short-lived bots (Sogou, a 26-minute capture) can finish
@@ -147,7 +178,9 @@ host-level alert outcomes (bots and normal hosts alerted, time to alert) per bot
 
 - **CTU-13** (Stratosphere Lab): 13 labelled botnet scenarios, used for training and evaluation.
   Splits hold out entire botnet families (`ml/labels/ctu13.yaml`).
-- **IoT-23** (Stratosphere Lab): Zeek logs from IoT malware, used for the cross-dataset test.
+- **IoT-23** (Stratosphere Lab): Zeek logs from IoT malware and benign IoT honeypots, used for
+  the cross-dataset test (`python -m botgraph_ml.download iot23`, then
+  `python -m botgraph_ml.cross_dataset score|xgboost|report`).
 
 ## Roadmap
 
