@@ -113,10 +113,17 @@ def fit(
     pos_weight: float,
     on_epoch: EpochLogger | None = None,
     progress: bool = False,
+    init: NodeClassifier | None = None,
 ) -> FitResult:
-    """Train with early stopping on validation PR-AUC; returns the best checkpoint."""
+    """Train with early stopping on validation PR-AUC; returns the best checkpoint.
+
+    ``init`` fine-tunes a copy of an existing model instead of training from scratch.
+    """
     seed_everything(int(cfg["seed"]))
-    model = NodeClassifier(model_config(cfg)).to(device)
+    if init is not None:
+        model = copy.deepcopy(init).to(device)
+    else:
+        model = NodeClassifier(model_config(cfg)).to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=float(cfg["lr"]), weight_decay=float(cfg["weight_decay"])
     )

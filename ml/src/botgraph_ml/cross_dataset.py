@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,15 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from botgraph_core import NODE_FEATURES, build_window_graph, sliding_windows
+from botgraph_core import (
+    NODE_FEATURES,
+    GraphConfig,
+    Window,
+    WindowGraph,
+    WindowSpec,
+    build_window_graph,
+    sliding_windows,
+)
 from botgraph_ml.config import graph_config, load_params, repo_path, window_spec
 from botgraph_ml.flow_labels import window_host_labels
 from botgraph_ml.metrics import AlertRule, binary_metrics, host_alerts, json_safe
@@ -48,34 +57,46 @@ def _paths(params: dict[str, Any]) -> tuple[Path, Path]:
 # --------------------------------------------------------------------------- score (torch)
 
 
-def score(params: dict[str, Any], max_windows: int | None, min_flows: int) -> Path:
-    import torch  # only this step needs torch
+def labelled_windows(
+    path: Path,
+    config: GraphConfig,
+    spec: WindowSpec,
+    min_flows: int,
+    max_windows: int | None = None,
+) -> Iterator[tuple[Window, WindowGraph]]:
+    """Window graphs of one capture, labelled from its flow labels; unlabelled windows skipped."""
+    flows = pd.read_parquet(path)
+    windows = sliding_windows(flows, spec, min_flows=min_flows)
+    for i, window in enumerate(tqdm(windows, desc=path.stem, unit="win", leave=False)):
+        if max_windows is not None and i >= max_windows:
+            break
+        labels = window_host_labels(window.flows, config.internal_nets)
+        if labels:
+            yield window, build_window_graph(window.flows, window.window_id, config, labels)
+
+
+def score_captures(
+    paths: list[Path],
+    bundles: dict[str, tuple[Any, Any]],
+    config: GraphConfig,
+    spec: WindowSpec,
+    min_flows: int,
+    max_windows: int | None = None,
+) -> tuple[pd.DataFrame, dict[str, list[float]]]:
+    """Score every labelled host-window with each (model, scaler) bundle.
+
+    Returns one row per labelled host-window (node features, label, ``score_<name>`` per
+    bundle) and per-bundle inference timings in seconds.
+    """
+    import torch
 
     from botgraph_ml.gnn.data import to_data
-    from botgraph_ml.gnn.models import load_bundle
-
-    flows_dir, out_dir = _paths(params)
-    captures = sorted(flows_dir.glob("*.parquet"))
-    if not captures:
-        raise SystemExit(f"no flows in {flows_dir}; run download + prepare iot23 first")
-    models_dir = repo_path(params["data"]["models_dir"])
-    bundles = {m: load_bundle(models_dir / m) for m in GNN_MODELS if (models_dir / m).is_dir()}
-    config = graph_config(params, "iot23")
-    spec = window_spec(params)
 
     parts: list[pd.DataFrame] = []
     timings: dict[str, list[float]] = {m: [] for m in bundles}
-    for path in captures:
-        flows = pd.read_parquet(path)
-        capture_rows = 0
-        windows = sliding_windows(flows, spec, min_flows=min_flows)
-        for i, window in enumerate(tqdm(windows, desc=path.stem, unit="win", leave=False)):
-            if max_windows is not None and i >= max_windows:
-                break
-            labels = window_host_labels(window.flows, config.internal_nets)
-            if not labels:
-                continue
-            graph = build_window_graph(window.flows, window.window_id, config, labels)
+    for path in paths:
+        rows = 0
+        for window, graph in labelled_windows(path, config, spec, min_flows, max_windows):
             keep = graph.y >= 0
             part = pd.DataFrame(graph.x[keep], columns=list(NODE_FEATURES))
             part.insert(0, "y", graph.y[keep])
@@ -92,11 +113,30 @@ def score(params: dict[str, Any], max_windows: int | None, min_flows: int) -> Pa
                 timings[name].append(time.perf_counter() - started)
                 part[f"score_{name}"] = torch.sigmoid(logits).numpy()[keep]
             parts.append(part)
-            capture_rows += len(part)
-        tqdm.write(f"{path.stem}: {len(flows):,} flows -> {capture_rows:,} labelled host-windows")
+            rows += len(part)
+        tqdm.write(f"{path.stem}: {rows:,} labelled host-windows")
+    return pd.concat(parts, ignore_index=True), timings
+
+
+def score(params: dict[str, Any], max_windows: int | None, min_flows: int) -> Path:
+    from botgraph_ml.gnn.models import load_bundle
+
+    flows_dir, out_dir = _paths(params)
+    captures = sorted(flows_dir.glob("*.parquet"))
+    if not captures:
+        raise SystemExit(f"no flows in {flows_dir}; run download + prepare iot23 first")
+    models_dir = repo_path(params["data"]["models_dir"])
+    bundles = {m: load_bundle(models_dir / m) for m in GNN_MODELS if (models_dir / m).is_dir()}
+    scores, timings = score_captures(
+        captures,
+        bundles,
+        graph_config(params, "iot23"),
+        window_spec(params),
+        min_flows,
+        max_windows,
+    )
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    scores = pd.concat(parts, ignore_index=True)
     scores.to_parquet(out_dir / "scores.parquet", index=False)
     latency = {
         m: {"mean_ms": 1000 * float(np.mean(t)), "p95_ms": 1000 * float(np.percentile(t, 95))}
@@ -129,7 +169,9 @@ def _threshold(params: dict[str, Any], model: str) -> float:
     return float(json.loads(path.read_text())["threshold"])
 
 
-def _alerts(scores: pd.DataFrame, col: str, threshold: float, rule: AlertRule) -> dict[str, Any]:
+def alert_outcome(
+    scores: pd.DataFrame, col: str, threshold: float, rule: AlertRule
+) -> dict[str, Any]:
     bots = benign = bots_total = benign_total = 0
     times: list[float] = []
     for _, cap in scores.groupby("capture"):
@@ -193,7 +235,7 @@ def report(params: dict[str, Any]) -> str:
         )
         levels = {}
         for level, rule in LEVELS.items():
-            a = _alerts(scores, col, thr, rule)
+            a = alert_outcome(scores, col, thr, rule)
             levels[level] = a
             ttd = a["median_time_to_alert_min"]
             alert_lines.append(

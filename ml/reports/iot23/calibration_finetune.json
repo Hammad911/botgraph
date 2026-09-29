@@ -1,0 +1,347 @@
+[
+  {
+    "held_out": "CTU-Honeypot-Capture-4-1",
+    "calibration_windows": 349,
+    "repeats": 1,
+    "best_epoch": 1,
+    "threshold": {
+      "before": 0.9615089893341064,
+      "after": 0.011815163306891918
+    },
+    "ctu13_test_pr_auc": {
+      "before": 0.8780258094442602,
+      "after": 0.8262028196848288
+    },
+    "held_out_honeypot": {
+      "before": {
+        "flagged_benign_windows": 0.5040871934604905,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 1,
+            "benign_total": 1,
+            "median_time_to_alert_min": null
+          },
+          "alert": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 1,
+            "benign_total": 1,
+            "median_time_to_alert_min": null
+          }
+        }
+      },
+      "after": {
+        "flagged_benign_windows": 0.7670299727520435,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 1,
+            "benign_total": 1,
+            "median_time_to_alert_min": null
+          },
+          "alert": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 1,
+            "benign_total": 1,
+            "median_time_to_alert_min": null
+          }
+        }
+      }
+    },
+    "malware_captures": {
+      "before": {
+        "window": {
+          "n": 20710,
+          "n_pos": 11109,
+          "precision": 0.6674158706374477,
+          "recall": 0.9622828337384103,
+          "f1": 0.7881737078817371,
+          "pr_auc": 0.963760797185957,
+          "roc_auc": 0.944318524258803,
+          "fpr_at_95_recall": 0.46922195604624517
+        },
+        "flagged_benign_windows": 0.5548380377044058,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 9,
+            "bots_total": 9,
+            "benign_alerted": 2,
+            "benign_total": 8,
+            "median_time_to_alert_min": 4.0
+          },
+          "alert": {
+            "bots_alerted": 8,
+            "bots_total": 9,
+            "benign_alerted": 1,
+            "benign_total": 8,
+            "median_time_to_alert_min": 53.0
+          }
+        }
+      },
+      "after": {
+        "window": {
+          "n": 20710,
+          "n_pos": 11109,
+          "precision": 0.5582311070725428,
+          "recall": 0.9954091277342695,
+          "f1": 0.715311469047157,
+          "pr_auc": 0.9230814072324295,
+          "roc_auc": 0.876449149023347,
+          "fpr_at_95_recall": 0.6314967190917613
+        },
+        "flagged_benign_windows": 0.9114675554629726,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 9,
+            "bots_total": 9,
+            "benign_alerted": 7,
+            "benign_total": 8,
+            "median_time_to_alert_min": 3.0
+          },
+          "alert": {
+            "bots_alerted": 9,
+            "bots_total": 9,
+            "benign_alerted": 1,
+            "benign_total": 8,
+            "median_time_to_alert_min": 80.0
+          }
+        }
+      }
+    },
+    "method": "finetune"
+  },
+  {
+    "held_out": "CTU-Honeypot-Capture-5-1",
+    "calibration_windows": 753,
+    "repeats": 1,
+    "best_epoch": 1,
+    "threshold": {
+      "before": 0.9615089893341064,
+      "after": 0.17825695872306824
+    },
+    "ctu13_test_pr_auc": {
+      "before": 0.8780258094442602,
+      "after": 0.8569844607018163
+    },
+    "held_out_honeypot": {
+      "before": {
+        "flagged_benign_windows": 0.9117082533589251,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 9,
+            "benign_total": 10,
+            "median_time_to_alert_min": null
+          },
+          "alert": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 2,
+            "benign_total": 10,
+            "median_time_to_alert_min": null
+          }
+        }
+      },
+      "after": {
+        "flagged_benign_windows": 0.6372360844529751,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 10,
+            "benign_total": 10,
+            "median_time_to_alert_min": null
+          },
+          "alert": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 2,
+            "benign_total": 10,
+            "median_time_to_alert_min": null
+          }
+        }
+      }
+    },
+    "malware_captures": {
+      "before": {
+        "window": {
+          "n": 20710,
+          "n_pos": 11109,
+          "precision": 0.6674158706374477,
+          "recall": 0.9622828337384103,
+          "f1": 0.7881737078817371,
+          "pr_auc": 0.963760797185957,
+          "roc_auc": 0.944318524258803,
+          "fpr_at_95_recall": 0.46922195604624517
+        },
+        "flagged_benign_windows": 0.5548380377044058,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 9,
+            "bots_total": 9,
+            "benign_alerted": 2,
+            "benign_total": 8,
+            "median_time_to_alert_min": 4.0
+          },
+          "alert": {
+            "bots_alerted": 8,
+            "bots_total": 9,
+            "benign_alerted": 1,
+            "benign_total": 8,
+            "median_time_to_alert_min": 53.0
+          }
+        }
+      },
+      "after": {
+        "window": {
+          "n": 20710,
+          "n_pos": 11109,
+          "precision": 0.6053683922213092,
+          "recall": 0.9947790080115222,
+          "f1": 0.752690369159515,
+          "pr_auc": 0.9612216235998404,
+          "roc_auc": 0.9409517102072955,
+          "fpr_at_95_recall": 0.4501614415165087
+        },
+        "flagged_benign_windows": 0.7503385064055828,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 9,
+            "bots_total": 9,
+            "benign_alerted": 5,
+            "benign_total": 8,
+            "median_time_to_alert_min": 66.0
+          },
+          "alert": {
+            "bots_alerted": 9,
+            "bots_total": 9,
+            "benign_alerted": 1,
+            "benign_total": 8,
+            "median_time_to_alert_min": 97.0
+          }
+        }
+      }
+    },
+    "method": "finetune"
+  },
+  {
+    "held_out": "CTU-Honeypot-Capture-7-1_Somfy-01",
+    "calibration_windows": 1064,
+    "repeats": 1,
+    "best_epoch": 1,
+    "threshold": {
+      "before": 0.9615089893341064,
+      "after": 0.015797004103660583
+    },
+    "ctu13_test_pr_auc": {
+      "before": 0.8780258094442602,
+      "after": 0.8223105878516668
+    },
+    "held_out_honeypot": {
+      "before": {
+        "flagged_benign_windows": 0.3103448275862069,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 1,
+            "benign_total": 3,
+            "median_time_to_alert_min": null
+          },
+          "alert": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 0,
+            "benign_total": 3,
+            "median_time_to_alert_min": null
+          }
+        }
+      },
+      "after": {
+        "flagged_benign_windows": 0.4827586206896552,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 1,
+            "benign_total": 3,
+            "median_time_to_alert_min": null
+          },
+          "alert": {
+            "bots_alerted": 0,
+            "bots_total": 0,
+            "benign_alerted": 1,
+            "benign_total": 3,
+            "median_time_to_alert_min": null
+          }
+        }
+      }
+    },
+    "malware_captures": {
+      "before": {
+        "window": {
+          "n": 20710,
+          "n_pos": 11109,
+          "precision": 0.6674158706374477,
+          "recall": 0.9622828337384103,
+          "f1": 0.7881737078817371,
+          "pr_auc": 0.963760797185957,
+          "roc_auc": 0.944318524258803,
+          "fpr_at_95_recall": 0.46922195604624517
+        },
+        "flagged_benign_windows": 0.5548380377044058,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 9,
+            "bots_total": 9,
+            "benign_alerted": 2,
+            "benign_total": 8,
+            "median_time_to_alert_min": 4.0
+          },
+          "alert": {
+            "bots_alerted": 8,
+            "bots_total": 9,
+            "benign_alerted": 1,
+            "benign_total": 8,
+            "median_time_to_alert_min": 53.0
+          }
+        }
+      },
+      "after": {
+        "window": {
+          "n": 20710,
+          "n_pos": 11109,
+          "precision": 0.5665539501998156,
+          "recall": 0.9954091277342695,
+          "f1": 0.722107943971006,
+          "pr_auc": 0.8931094330650278,
+          "roc_auc": 0.8403844449432998,
+          "fpr_at_95_recall": 0.6198312675762941
+        },
+        "flagged_benign_windows": 0.8811582126861786,
+        "alerts": {
+          "warning": {
+            "bots_alerted": 9,
+            "bots_total": 9,
+            "benign_alerted": 7,
+            "benign_total": 8,
+            "median_time_to_alert_min": 60.0
+          },
+          "alert": {
+            "bots_alerted": 9,
+            "bots_total": 9,
+            "benign_alerted": 1,
+            "benign_total": 8,
+            "median_time_to_alert_min": 80.0
+          }
+        }
+      }
+    },
+    "method": "finetune"
+  }
+]
