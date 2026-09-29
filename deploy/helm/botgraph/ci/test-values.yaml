@@ -1,0 +1,17 @@
+# Values used by CI to lint and render the chart with every optional feature on.
+secrets:
+  dbUrl: postgresql+psycopg://botgraph:pw@postgres:5432/botgraph
+  jwtSecret: ci-only-secret-that-is-long-enough-to-pass
+  kafkaUsername: botgraph
+  kafkaPassword: pw
+kafka:
+  securityProtocol: SASL_SSL
+  saslMechanism: SCRAM-SHA-512
+models:
+  existingClaim: botgraph-models
+api:
+  autoscaling: { enabled: true }
+monitoring:
+  serviceMonitor: { enabled: true }
+  prometheusRule: { enabled: true }
+  grafanaDashboard: { enabled: true }

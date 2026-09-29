@@ -8,3 +8,8 @@ ml/data
 ml/models
 ml/reports/logs
 **/*.parquet
+web/node_modules
+web/.next
+web/.next-e2e
+web/test-results
+web/playwright-report

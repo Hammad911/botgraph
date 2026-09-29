@@ -1,0 +1,112 @@
+# Alerting rules for BotGraph's own health (not for botnet alerts: those live in the console).
+# The Helm chart ships these as a PrometheusRule; the compose stack mounts this same file.
+groups:
+  - name: botgraph.pipeline
+    rules:
+      - alert: BotgraphTargetDown
+        expr: up{job=~"botgraph.*"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.job }} is down"
+          description: "Prometheus cannot scrape {{ $labels.instance }} for 2 minutes."
+
+      - alert: BotgraphDetectorStalled
+        expr: time() - max by (sensor) (botgraph_last_window_processed_timestamp_seconds) > 600
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "No windows scored for sensor {{ $labels.sensor }} in 10 minutes"
+          description: >-
+            Windows close every minute. Either the sensor stopped sending flows or the
+            detector is stuck; check ingest rejects and consumer lag.
+
+      - alert: BotgraphConsumerLagHigh
+        expr: max by (job, topic) (botgraph_consumer_lag_messages) > 10000
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.job }} is {{ $value }} messages behind on {{ $labels.topic }}"
+          description: "Detection is falling behind real time; scale detectors by partition."
+
+      - alert: BotgraphWindowLatencyHigh
+        expr: >-
+          histogram_quantile(0.95, sum by (le) (rate(botgraph_window_latency_seconds_bucket[10m])))
+          > 2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 window scoring latency is {{ $value | humanizeDuration }}"
+          description: "Scoring must stay well under the 60 s window hop."
+
+      - alert: BotgraphIngestRejectRateHigh
+        expr: >-
+          sum(rate(botgraph_flows_ingested_total{result="rejected"}[10m]))
+          / sum(rate(botgraph_flows_ingested_total[10m])) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of flows rejected by ingest"
+          description: "A sensor is sending malformed flows; inspect the flows.dlq topic."
+
+      - alert: BotgraphLateFlows
+        expr: sum by (sensor) (rate(botgraph_late_flows_total[10m])) > 1
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "Sensor {{ $labels.sensor }} delivers flows after their window closed"
+          description: "Late flows are dropped. Check the sensor's clock or raise allowed_lateness_s."
+
+      - alert: BotgraphAlertStorm
+        expr: sum(increase(botgraph_alert_events_total{type="alert"}[15m])) > 25
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value }} host alerts in 15 minutes"
+          description: >-
+            Either a real outbreak or a changed network (see the drift dashboard); a sensor may
+            need recalibration.
+
+  - name: botgraph.drift
+    rules:
+      - alert: BotgraphDriftSinceCalibration
+        expr: >-
+          max by (sensor) (botgraph_feature_psi{reference="baseline"}) > 0.25
+          or max by (sensor) (botgraph_score_psi{reference="baseline"}) > 0.25
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "Sensor {{ $labels.sensor }} traffic changed since calibration (PSI {{ $value }})"
+          description: >-
+            Host features or scores moved away from the sensor's baseline. If the change is
+            legitimate (new devices, a new site), recalibrate the sensor; if not, investigate.
+
+      - alert: BotgraphUnlikeTrainingData
+        expr: max by (sensor) (botgraph_feature_psi{reference="training"}) > 1
+        for: 1h
+        labels: { severity: info }
+        annotations:
+          summary: "Sensor {{ $labels.sensor }} looks unlike the model's training data"
+          description: >-
+            Expected on IoT networks (PSI 4-9 on IoT-23 vs 0.13 on CTU-13). Keep learning-mode
+            calibration on and expect more false alerts on periodic devices.
+
+  - name: botgraph.api
+    rules:
+      - alert: BotgraphApiErrorRateHigh
+        expr: >-
+          sum(rate(botgraph_api_requests_total{status=~"5.."}[5m]))
+          / sum(rate(botgraph_api_requests_total[5m])) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of API requests fail"
+          description: "Check the API logs (request_id) and store readiness."
+
+      - alert: BotgraphLoginFailures
+        expr: sum(increase(botgraph_api_logins_total{result="failure"}[10m])) > 30
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value }} failed logins in 10 minutes"
+          description: "Possible password guessing against the console; see the API's auth logs."

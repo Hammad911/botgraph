@@ -3,6 +3,7 @@
 #   docker compose -f deploy/compose/docker-compose.yml --profile pipeline up -d   # + ingest, detector
 #   docker compose -f deploy/compose/docker-compose.yml --profile pipeline run --rm replay \
 #       replay --replay ctu13:6 --speed 60
+#   ... --profile pipeline --profile observability up -d   # + Prometheus :9090, Grafana :3001
 name: botgraph
 
 services:
@@ -73,6 +74,7 @@ services:
     command: [ingest]
     environment:
       BOTGRAPH_KAFKA_BOOTSTRAP: redpanda:9092
+      BOTGRAPH_METRICS_PORT: "9100"
     depends_on:
       redpanda: { condition: service_healthy }
     restart: unless-stopped
@@ -87,11 +89,41 @@ services:
     environment:
       BOTGRAPH_KAFKA_BOOTSTRAP: redpanda:9092
       BOTGRAPH_DB_URL: postgresql+psycopg://${POSTGRES_USER:-botgraph}:${POSTGRES_PASSWORD:-botgraph}@postgres:5432/${POSTGRES_DB:-botgraph}
+      BOTGRAPH_METRICS_PORT: "9100"
     volumes:
       - ../../ml/models:/app/ml/models:ro
     depends_on:
       redpanda: { condition: service_healthy }
       postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  api:
+    profiles: [pipeline]
+    build: { context: ../.., dockerfile: deploy/Dockerfile }
+    entrypoint: [botgraph-api]
+    command: [serve, --host, 0.0.0.0, --port, "8000"]
+    environment:
+      BOTGRAPH_DB_URL: postgresql+psycopg://${POSTGRES_USER:-botgraph}:${POSTGRES_PASSWORD:-botgraph}@postgres:5432/${POSTGRES_DB:-botgraph}
+      # Production mode refuses to start without a strong secret: set it in .env.
+      BOTGRAPH_ENV: production
+      BOTGRAPH_JWT_SECRET: ${BOTGRAPH_JWT_SECRET:-}
+      BOTGRAPH_CORS_ORIGINS: http://localhost:3000
+      BOTGRAPH_METRICS_PORT: "9100"
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  web:
+    profiles: [pipeline]
+    build:
+      context: ../..
+      dockerfile: deploy/web.Dockerfile
+      args:
+        BOTGRAPH_API_URL: http://api:8000
+        NEXT_PUBLIC_BOTGRAPH_WS_URL: ws://localhost:8000/api/ws
+    ports: ["3000:3000"]
+    depends_on: [api]
     restart: unless-stopped
 
   replay:
@@ -105,7 +137,37 @@ services:
     depends_on:
       redpanda: { condition: service_healthy }
 
+  # ---------------------------------------------------------- observability (profile)
+  prometheus:
+    profiles: [observability]
+    image: prom/prometheus:v2.54.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Alert rules and the dashboard live in the Helm chart; compose mounts the same files.
+      - ../helm/botgraph/files/prometheus-alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus:/prometheus
+    ports: ["9090:9090"]
+
+  grafana:
+    profiles: [observability]
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../helm/botgraph/files/grafana-dashboard.json:/var/lib/grafana/dashboards/botgraph.json:ro
+      - grafana:/var/lib/grafana
+    ports: ["3001:3000"]
+    depends_on: [prometheus]
+
 volumes:
+  prometheus:
+  grafana:
   redpanda:
   postgres:
   clickhouse:

@@ -1,0 +1,48 @@
+{{- if .Values.monitoring.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "botgraph.fullname" . }}
+  labels:
+    {{- include "botgraph.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.serviceMonitor.labels }}{{ toYaml . | nindent 4 }}{{ end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      botgraph.io/metrics: "true"
+  endpoints:
+    - port: metrics
+      interval: {{ .Values.monitoring.serviceMonitor.interval }}
+      relabelings:
+        # job="botgraph-<component>" whatever the release is called: the alert rules and the
+        # dashboard match on it.
+        - sourceLabels: [__meta_kubernetes_service_label_app_kubernetes_io_component]
+          targetLabel: job
+          replacement: botgraph-$1
+{{- end }}
+{{- if .Values.monitoring.prometheusRule.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "botgraph.fullname" . }}
+  labels:
+    {{- include "botgraph.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.prometheusRule.labels }}{{ toYaml . | nindent 4 }}{{ end }}
+spec:
+{{ .Files.Get "files/prometheus-alerts.yml" | indent 2 }}
+{{- end }}
+{{- if .Values.monitoring.grafanaDashboard.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "botgraph.fullname" . }}-dashboard
+  labels:
+    {{- include "botgraph.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.grafanaDashboard.labels }}{{ toYaml . | nindent 4 }}{{ end }}
+data:
+  botgraph.json: |-
+{{ .Files.Get "files/grafana-dashboard.json" | indent 4 }}
+{{- end }}
