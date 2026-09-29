@@ -7,7 +7,7 @@ dependencies = [
     "botgraph-stream",
     "fastapi>=0.115",
     "pyjwt>=2.9",
-    "uvicorn[standard]>=0.30",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [project.scripts]
