@@ -176,7 +176,7 @@ leaves unlabelled were also alerted; with no ground truth for them, they cannot 
 - **Learning mode**: a new network is observed first (default 60 min); the threshold becomes
   the 95th percentile of its baseline scores, the calibration validated on IoT-23. Thresholds
   are stored, so a restart does not relearn; `botgraph recalibrate` starts over.
-- **Explanations** (GNNExplainer) are computed on the host's 2-hop neighbourhood, which gives
+- **Explanations** (Integrated Gradients on the logit) are computed on the host's 2-hop neighbourhood, which gives
   exactly the model's score for a 2-layer GNN at a fraction of the cost.
 - Quiet networks are handled: windows need only 1 flow (a lone beacon still gets scored).
 
@@ -247,7 +247,8 @@ uv run python -m botgraph_ml.gnn.train --model gatv2 --split lofo:Menti --epochs
 uv run python -m botgraph_ml.alert_tuning   # choose the alert rule on validation folds only
 ```
 
-Explanations (GNNExplainer) list the flows and host features that drove a detection, with raw
+Explanations (Integrated Gradients on the host's logit) list the flows and host features that
+pushed its score up, with raw
 (unscaled) values an analyst can read.
 
 Every report includes window-level precision, recall, F1, PR-AUC and FPR at 95% recall, plus

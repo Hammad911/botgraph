@@ -2,7 +2,7 @@
 
     flows.normalized -> Detector (windows, graph, scores) -> detections
                      -> AlertEngine (learning mode, warning/alert/cleared) -> alerts
-                     -> GNNExplainer on alert-level events -> stored with the alert
+                     -> Integrated Gradients on alert-level events -> stored with the alert
 
 Alert state is per sensor and the detector already owns each sensor's stream (Kafka partition
 key), so both run in the same process; the recent window graphs needed for explanations are
@@ -37,13 +37,13 @@ class DetectorService:
         detector: Detector,
         engine: AlertEngine,
         store: Store | None = None,
-        explain_epochs: int = 50,
+        explain_steps: int = 50,
     ) -> None:
         self.bus = bus
         self.detector = detector
         self.engine = engine
         self.store = store
-        self.explain_epochs = explain_epochs
+        self.explain_steps = explain_steps
         self.stats = ServiceStats()
 
     def _handle(self, detection: dict[str, Any]) -> None:
@@ -54,9 +54,9 @@ class DetectorService:
         if self.store is not None:
             self.store.record_window(detection)
         for event in self.engine.process(detection):
-            if event["type"] == "alert" and self.explain_epochs > 0:
+            if event["type"] == "alert" and self.explain_steps > 0:
                 event["explanation"] = self.detector.explain(
-                    sensor, event["window_id"], event["ip"], self.explain_epochs
+                    sensor, event["window_id"], event["ip"], self.explain_steps
                 )
             self.stats.events[event["type"]] = self.stats.events.get(event["type"], 0) + 1
             ALERT_EVENTS.labels(event["type"]).inc()

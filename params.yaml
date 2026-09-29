@@ -82,7 +82,7 @@ stream:
   allowed_lateness_s: 30
   learning_minutes: 60 # per new sensor; 0 on the model's home network (CTU-13)
   baseline_quantile: 0.95
-  explain_epochs: 50
+  explain_steps: 32 # Integrated Gradients steps per alert-level event
   batch_flows: 500 # flows per bus message
   levels:
     warning: { k: 3, n: 5 }

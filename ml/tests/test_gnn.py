@@ -175,16 +175,43 @@ def test_explain_node_reports_raw_values(splits) -> None:  # type: ignore[no-unt
     graphs, _, data = splits
     torch.manual_seed(0)
     model = NodeClassifier(ModelConfig(kind="e_graphsage", hidden=32)).eval()
-    out = explain_node(model, graphs["test"][0], data["test"][0], node=0, epochs=20, top_k=3)
+    out = explain_node(model, graphs["test"][0], data["test"][0], node=0, steps=16, top_k=3)
 
     assert out["ip"] == "10.0.0.0"
     assert 0.0 <= out["score"] <= 1.0
-    assert len(out["top_features"]) == 3
+    assert 1 <= len(out["top_features"]) <= 3
+    assert all(f["importance"] > 0 for f in out["top_features"])  # only what pushed it up
     assert {f["feature"] for f in out["top_features"]} <= set(NODE_FEATURES)
     for flow in out["top_flows"]:
         assert set(flow["features"]) == set(EDGE_FEATURES)
         # raw (unscaled) periodicity is always in [0, 1] in the synthetic data
         assert 0.0 <= flow["features"]["periodicity"] <= 1.0
+
+
+def test_explanations_survive_a_saturated_score(splits) -> None:  # type: ignore[no-untyped-def]
+    """Regression test: real alerts score ~1.000 (logit ~47), where GNNExplainer returned
+    all-zero masks. Integrated Gradients on the logit must still attribute, and satisfy
+    completeness (attributions sum to logit - baseline logit)."""
+    from botgraph_ml.gnn.explain import integrated_gradients
+
+    graphs, _, data = splits
+    torch.manual_seed(0)
+    model = NodeClassifier(ModelConfig(kind="gatv2", hidden=32)).eval()
+    d = data["test"][0]
+    with torch.no_grad():  # push node 0's output deep into saturation, like the trained model
+        model.head[-1].weight.mul_(200.0)
+        if model(d.x, d.edge_index, d.edge_attr)[0] < 0:
+            model.head[-1].weight.neg_()
+            model.head[-1].bias.neg_()
+        assert torch.sigmoid(model(d.x, d.edge_index, d.edge_attr)[0]).item() > 0.999999
+
+    attr_x, attr_e, logit, base = integrated_gradients(model, d, node=0, steps=64)
+    total = float(attr_x.sum() + attr_e.sum())
+    assert total == pytest.approx(logit - base, rel=0.05, abs=0.5)
+    assert float(attr_x[0].abs().sum()) > 0  # the host's own features get non-zero credit
+
+    out = explain_node(model, graphs["test"][0], d, node=0, steps=32)
+    assert out["score"] > 0.999 and out["top_features"]
 
 
 def _report(model: str, family: str, pr_auc: float) -> dict:  # type: ignore[type-arg]

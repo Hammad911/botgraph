@@ -353,6 +353,12 @@ class Store:
         with Session(self.engine) as s:
             return list(s.scalars(query).all())
 
+    def max_alert_id(self) -> int:
+        """Highest alert id: the cursor for "alerts raised after now" (ids are insertion order;
+        window_start is traffic time, which a replay of old captures does not keep monotonic)."""
+        with Session(self.engine) as s:
+            return int(s.scalar(select(func.max(Alert.id))) or 0)
+
     def get_alert(self, alert_id: int) -> Alert | None:
         with Session(self.engine) as s:
             return s.get(Alert, alert_id)

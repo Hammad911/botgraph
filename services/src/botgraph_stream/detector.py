@@ -205,16 +205,16 @@ class Detector:
         }
 
     def explain(
-        self, sensor: str, window_id: str, ip: str, epochs: int = 50, top_k: int = 5
+        self, sensor: str, window_id: str, ip: str, steps: int = 32, top_k: int = 5
     ) -> dict[str, Any] | None:
-        """GNNExplainer: the flows and host features behind ``ip``'s score in that window."""
+        """Integrated Gradients: the flows and features behind ``ip``'s score in that window."""
         cached = self._recent.get(sensor, {}).get(window_id)
         if cached is None or ip not in cached[0].nodes:
             return None
         # An L-layer GNN's output for a host depends only on its L-hop neighbourhood, so
         # explaining on that ego graph is exact and far cheaper than on the whole window.
         ego, node = ego_graph(cached[0], ip, hops=self.model.cfg.layers)
-        return explain_node(self.model, ego, to_data(ego, self.scaler), node, epochs, top_k)
+        return explain_node(self.model, ego, to_data(ego, self.scaler), node, steps, top_k)
 
     def process(self, sensor: str, flows: pd.DataFrame) -> Iterator[dict[str, Any]]:
         """Yield one detection per window closed by these flows.

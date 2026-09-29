@@ -170,7 +170,7 @@ def build_service(
     internal_nets: tuple[str, ...],
     learning_minutes: float,
     model: str | None = None,
-    explain_epochs: int | None = None,
+    explain_steps: int | None = None,
 ) -> DetectorService:
     """Detector + alert engine + store, configured from params.yaml's ``stream`` section."""
     sp = params["stream"]
@@ -191,8 +191,8 @@ def build_service(
         baseline_quantile=float(sp["baseline_quantile"]),
         thresholds=store.thresholds(),
     )
-    epochs = sp["explain_epochs"] if explain_epochs is None else explain_epochs
-    return DetectorService(bus, detector, engine, store, explain_epochs=int(epochs))
+    steps = sp["explain_steps"] if explain_steps is None else explain_steps
+    return DetectorService(bus, detector, engine, store, explain_steps=int(steps))
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -210,7 +210,7 @@ def cmd_run(args: argparse.Namespace) -> None:
     store = Store(db_url)
     bus = LocalBus()
     service = build_service(
-        params, bus, store, source.internal_nets, learning_min, args.model, args.explain_epochs
+        params, bus, store, source.internal_nets, learning_min, args.model, args.explain_steps
     )
     replayer = Replayer(bus, source, speed=args.speed, batch_flows=int(sp["batch_flows"]))
     view, ingest, events = RunView(source, replayer, service), IngestStats(), []
@@ -318,7 +318,7 @@ def cmd_detect(args: argparse.Namespace) -> None:
         nets,
         learning,
         args.model,
-        args.explain_epochs,
+        args.explain_steps,
     )
     console.print(f"detector: {bus.bootstrap} {args.topic_prefix}{FLOWS} -> {DETECTIONS}, {ALERTS}")
     serve(lambda: service.step(timeout=1.0), args.idle_exit)
@@ -417,7 +417,9 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument(
         "--learning-minutes", type=float, help="0 on CTU-13, stream.learning_minutes otherwise"
     )
-    run.add_argument("--explain-epochs", type=int, help="GNNExplainer epochs per alert (0 = off)")
+    run.add_argument(
+        "--explain-steps", type=int, help="Integrated Gradients steps per alert (0 = off)"
+    )
     run.add_argument("--fresh", action="store_true", help="start from an empty SQLite store")
     run.add_argument("--quiet", action="store_true", help="no live view, summary only")
     run.add_argument("--summary-json", help="also write the summary to this file")
@@ -456,7 +458,9 @@ def main(argv: list[str] | None = None) -> None:
     )
     det.add_argument("--model", help="bundle name under ml/models (default: stream.model)")
     det.add_argument("--learning-minutes", type=float, help="default: stream.learning_minutes")
-    det.add_argument("--explain-epochs", type=int, help="GNNExplainer epochs per alert (0 = off)")
+    det.add_argument(
+        "--explain-steps", type=int, help="Integrated Gradients steps per alert (0 = off)"
+    )
     det.add_argument(
         "--idle-exit", type=float, help="stop (and flush) after this many idle seconds"
     )

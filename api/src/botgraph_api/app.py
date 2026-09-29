@@ -213,8 +213,7 @@ def create_app(store: Store, secret: str, poll_interval_s: float = 2.0) -> FastA
             await ws.close(code=4401)
             return
         await ws.accept()
-        existing = await asyncio.to_thread(store.alerts, newest_first=True, limit=1)
-        last_id = existing[0].id if existing else 0
+        last_id = await asyncio.to_thread(store.max_alert_id)
         seen_windows: dict[str, float | None] = {
             s.id: s.last_window_start for s in await asyncio.to_thread(store.sensors)
         }

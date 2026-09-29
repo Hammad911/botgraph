@@ -50,7 +50,7 @@ def test_kafka_pipeline_end_to_end(bundle_dir, tmp_path) -> None:  # type: ignor
     store = Store(os.environ.get("BOTGRAPH_TEST_DB_URL") or f"sqlite:///{tmp_path / 'k.db'}")
     detector = Detector(bundle_dir, GraphConfig(internal_nets=INTERNAL), SPEC, 1, 0.0)
     service = DetectorService(
-        detector_bus, detector, AlertEngine(detector.threshold), store, explain_epochs=0
+        detector_bus, detector, AlertEngine(detector.threshold), store, explain_steps=0
     )
 
     stats, deadline = IngestStats(), time.monotonic() + 90

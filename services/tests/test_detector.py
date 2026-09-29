@@ -71,7 +71,7 @@ def test_pipeline_ingest_to_detections_with_dlq(bundle_dir) -> None:  # type: ig
     for i in range(0, len(records), 50):
         bus.publish(FLOWS_RAW, "lab", {"sensor_id": "lab", "flows": records[i : i + 50]})
     det = Detector(bundle_dir, CONFIG, SPEC, min_flows=1, allowed_lateness_s=0.0)
-    service = DetectorService(bus, det, AlertEngine(det.threshold), explain_epochs=0)
+    service = DetectorService(bus, det, AlertEngine(det.threshold), explain_steps=0)
     while ingest_step(bus, stats) or service.step():
         pass
     service.flush()

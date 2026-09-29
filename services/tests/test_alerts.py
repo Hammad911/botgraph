@@ -146,7 +146,7 @@ def test_service_explains_alerts(bundle_dir, tmp_path) -> None:  # type: ignore[
         det,
         AlertEngine(model_threshold=0.0),
         Store(f"sqlite:///{tmp_path / 's.db'}"),
-        explain_epochs=5,
+        explain_steps=5,
     )
     bus.publish(
         FLOWS, "lab", {"sensor_id": "lab", "flows": json.loads(flows.to_json(orient="records"))}

@@ -168,6 +168,20 @@ def test_overview_host_and_graph(client: TestClient) -> None:
     assert client.get("/api/graph/nope", headers=h).status_code == 404
 
 
+def test_websocket_does_not_replay_history_from_older_captures(
+    client: TestClient, store: Store
+) -> None:
+    # A replay of an *older* capture inserts alerts with higher ids but earlier traffic time.
+    store.record_event(_alert("10.0.0.77", T0 - 86400 * 365))
+    token = client.post(
+        "/api/auth/login", json={"username": "viv", "password": "viv-password"}
+    ).json()["access_token"]
+    with client.websocket_connect(f"/api/ws?token={token}") as ws:
+        store.record_event(_alert("10.0.0.88", T0 - 86400 * 400))  # truly new, even older traffic
+        message = ws.receive_json()
+    assert message["type"] == "alert" and message["alert"]["ip"] == "10.0.0.88"
+
+
 def test_websocket_pushes_new_alerts_and_windows(client: TestClient, store: Store) -> None:
     with pytest.raises(WebSocketDisconnect), client.websocket_connect("/api/ws?token=bad") as ws:
         ws.receive_json()
