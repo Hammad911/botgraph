@@ -15,9 +15,9 @@ Before = uncalibrated CTU-13 model.
 
 | Held out | IoT window PR-AUC | Infected devices alerted (12 of 15) | Benign devices alerted (12 of 15) | CTU-13 test PR-AUC |
 |---|---|---|---|---|
-| Honeypot 4-1 | 0.964 → 0.964 | 8/9 → 3/9 | 1/8 → 0/8 | unchanged (same model) |
-| Honeypot 5-1 | 0.964 → 0.964 | 8/9 → 7/9 | 1/8 → 0/8 | unchanged (same model) |
-| Honeypot 7-1_Somfy-01 | 0.964 → 0.964 | 8/9 → 5/9 | 1/8 → 0/8 | unchanged (same model) |
+| Honeypot 4-1 | 0.966 → 0.966 | 11/13 → 6/13 | 2/10 → 0/10 | unchanged (same model) |
+| Honeypot 5-1 | 0.966 → 0.966 | 11/13 → 10/13 | 2/10 → 0/10 | unchanged (same model) |
+| Honeypot 7-1_Somfy-01 | 0.966 → 0.966 | 11/13 → 8/13 | 2/10 → 0/10 | unchanged (same model) |
 
 ## Infected device alerted after calibration (12 of 15), per held-out fold
 
@@ -30,4 +30,7 @@ Before = uncalibrated CTU-13 model.
 | 34-1 | yes | yes | yes |
 | 42-1 | no | yes | yes |
 | 44-1 | no | no | no |
+| 48-1 | yes | yes | yes |
+| 49-1 | yes | yes | yes |
+| 60-1 | yes | yes | yes |
 | 8-1 | no | yes | yes |

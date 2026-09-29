@@ -50,59 +50,59 @@
     "malware_captures": {
       "before": {
         "window": {
-          "n": 20710,
-          "n_pos": 11109,
-          "precision": 0.6674158706374477,
-          "recall": 0.9622828337384103,
-          "f1": 0.7881737078817371,
-          "pr_auc": 0.963760797185957,
-          "roc_auc": 0.944318524258803,
-          "fpr_at_95_recall": 0.46922195604624517
+          "n": 23107,
+          "n_pos": 12295,
+          "precision": 0.67490743377955,
+          "recall": 0.9636437576250508,
+          "f1": 0.7938358458961474,
+          "pr_auc": 0.9661395565434957,
+          "roc_auc": 0.9488780371003436,
+          "fpr_at_95_recall": 0.451165371809101
         },
-        "flagged_benign_windows": 0.5548380377044058,
+        "flagged_benign_windows": 0.5278394376618571,
         "alerts": {
           "warning": {
-            "bots_alerted": 9,
-            "bots_total": 9,
-            "benign_alerted": 2,
-            "benign_total": 8,
-            "median_time_to_alert_min": 4.0
+            "bots_alerted": 12,
+            "bots_total": 13,
+            "benign_alerted": 3,
+            "benign_total": 10,
+            "median_time_to_alert_min": 3.5
           },
           "alert": {
-            "bots_alerted": 8,
-            "bots_total": 9,
-            "benign_alerted": 1,
-            "benign_total": 8,
-            "median_time_to_alert_min": 53.0
+            "bots_alerted": 11,
+            "bots_total": 13,
+            "benign_alerted": 2,
+            "benign_total": 10,
+            "median_time_to_alert_min": 26.0
           }
         }
       },
       "after": {
         "window": {
-          "n": 20710,
-          "n_pos": 11109,
-          "precision": 0.992841163310962,
-          "recall": 0.7989918084436043,
-          "f1": 0.8854306947977455,
-          "pr_auc": 0.963760797185957,
-          "roc_auc": 0.944318524258803,
-          "fpr_at_95_recall": 0.46922195604624517
+          "n": 23107,
+          "n_pos": 12295,
+          "precision": 0.9924640555280119,
+          "recall": 0.8140707604717364,
+          "f1": 0.8944593386952636,
+          "pr_auc": 0.9661395565434957,
+          "roc_auc": 0.9488780371003436,
+          "fpr_at_95_recall": 0.451165371809101
         },
-        "flagged_benign_windows": 0.0066659722945526505,
+        "flagged_benign_windows": 0.007029226785053644,
         "alerts": {
           "warning": {
-            "bots_alerted": 6,
-            "bots_total": 9,
+            "bots_alerted": 9,
+            "bots_total": 13,
             "benign_alerted": 0,
-            "benign_total": 8,
-            "median_time_to_alert_min": 63.5
+            "benign_total": 10,
+            "median_time_to_alert_min": 20.0
           },
           "alert": {
-            "bots_alerted": 3,
-            "bots_total": 9,
+            "bots_alerted": 6,
+            "bots_total": 13,
             "benign_alerted": 0,
-            "benign_total": 8,
-            "median_time_to_alert_min": 16.0
+            "benign_total": 10,
+            "median_time_to_alert_min": 14.0
           }
         }
       }
@@ -115,6 +115,9 @@
       "CTU-IoT-Malware-Capture-34-1": true,
       "CTU-IoT-Malware-Capture-42-1": false,
       "CTU-IoT-Malware-Capture-44-1": false,
+      "CTU-IoT-Malware-Capture-48-1": true,
+      "CTU-IoT-Malware-Capture-49-1": true,
+      "CTU-IoT-Malware-Capture-60-1": true,
       "CTU-IoT-Malware-Capture-8-1": false
     }
   },
@@ -169,59 +172,59 @@
     "malware_captures": {
       "before": {
         "window": {
-          "n": 20710,
-          "n_pos": 11109,
-          "precision": 0.6674158706374477,
-          "recall": 0.9622828337384103,
-          "f1": 0.7881737078817371,
-          "pr_auc": 0.963760797185957,
-          "roc_auc": 0.944318524258803,
-          "fpr_at_95_recall": 0.46922195604624517
+          "n": 23107,
+          "n_pos": 12295,
+          "precision": 0.67490743377955,
+          "recall": 0.9636437576250508,
+          "f1": 0.7938358458961474,
+          "pr_auc": 0.9661395565434957,
+          "roc_auc": 0.9488780371003436,
+          "fpr_at_95_recall": 0.451165371809101
         },
-        "flagged_benign_windows": 0.5548380377044058,
+        "flagged_benign_windows": 0.5278394376618571,
         "alerts": {
           "warning": {
-            "bots_alerted": 9,
-            "bots_total": 9,
-            "benign_alerted": 2,
-            "benign_total": 8,
-            "median_time_to_alert_min": 4.0
+            "bots_alerted": 12,
+            "bots_total": 13,
+            "benign_alerted": 3,
+            "benign_total": 10,
+            "median_time_to_alert_min": 3.5
           },
           "alert": {
-            "bots_alerted": 8,
-            "bots_total": 9,
-            "benign_alerted": 1,
-            "benign_total": 8,
-            "median_time_to_alert_min": 53.0
+            "bots_alerted": 11,
+            "bots_total": 13,
+            "benign_alerted": 2,
+            "benign_total": 10,
+            "median_time_to_alert_min": 26.0
           }
         }
       },
       "after": {
         "window": {
-          "n": 20710,
-          "n_pos": 11109,
-          "precision": 0.8862542018715363,
-          "recall": 0.878116842200018,
-          "f1": 0.8821667570989329,
-          "pr_auc": 0.963760797185957,
-          "roc_auc": 0.944318524258803,
-          "fpr_at_95_recall": 0.46922195604624517
+          "n": 23107,
+          "n_pos": 12295,
+          "precision": 0.8858072387149247,
+          "recall": 0.8858072387149247,
+          "f1": 0.8858072387149247,
+          "pr_auc": 0.9661395565434957,
+          "roc_auc": 0.9488780371003436,
+          "fpr_at_95_recall": 0.451165371809101
         },
-        "flagged_benign_windows": 0.13040308301218623,
+        "flagged_benign_windows": 0.12985571587125416,
         "alerts": {
           "warning": {
-            "bots_alerted": 8,
-            "bots_total": 9,
+            "bots_alerted": 11,
+            "bots_total": 13,
             "benign_alerted": 0,
-            "benign_total": 8,
-            "median_time_to_alert_min": 49.0
+            "benign_total": 10,
+            "median_time_to_alert_min": 20.0
           },
           "alert": {
-            "bots_alerted": 7,
-            "bots_total": 9,
+            "bots_alerted": 10,
+            "bots_total": 13,
             "benign_alerted": 0,
-            "benign_total": 8,
-            "median_time_to_alert_min": 87.0
+            "benign_total": 10,
+            "median_time_to_alert_min": 58.0
           }
         }
       }
@@ -234,6 +237,9 @@
       "CTU-IoT-Malware-Capture-34-1": true,
       "CTU-IoT-Malware-Capture-42-1": true,
       "CTU-IoT-Malware-Capture-44-1": false,
+      "CTU-IoT-Malware-Capture-48-1": true,
+      "CTU-IoT-Malware-Capture-49-1": true,
+      "CTU-IoT-Malware-Capture-60-1": true,
       "CTU-IoT-Malware-Capture-8-1": true
     }
   },
@@ -288,59 +294,59 @@
     "malware_captures": {
       "before": {
         "window": {
-          "n": 20710,
-          "n_pos": 11109,
-          "precision": 0.6674158706374477,
-          "recall": 0.9622828337384103,
-          "f1": 0.7881737078817371,
-          "pr_auc": 0.963760797185957,
-          "roc_auc": 0.944318524258803,
-          "fpr_at_95_recall": 0.46922195604624517
+          "n": 23107,
+          "n_pos": 12295,
+          "precision": 0.67490743377955,
+          "recall": 0.9636437576250508,
+          "f1": 0.7938358458961474,
+          "pr_auc": 0.9661395565434957,
+          "roc_auc": 0.9488780371003436,
+          "fpr_at_95_recall": 0.451165371809101
         },
-        "flagged_benign_windows": 0.5548380377044058,
+        "flagged_benign_windows": 0.5278394376618571,
         "alerts": {
           "warning": {
-            "bots_alerted": 9,
-            "bots_total": 9,
-            "benign_alerted": 2,
-            "benign_total": 8,
-            "median_time_to_alert_min": 4.0
+            "bots_alerted": 12,
+            "bots_total": 13,
+            "benign_alerted": 3,
+            "benign_total": 10,
+            "median_time_to_alert_min": 3.5
           },
           "alert": {
-            "bots_alerted": 8,
-            "bots_total": 9,
-            "benign_alerted": 1,
-            "benign_total": 8,
-            "median_time_to_alert_min": 53.0
+            "bots_alerted": 11,
+            "bots_total": 13,
+            "benign_alerted": 2,
+            "benign_total": 10,
+            "median_time_to_alert_min": 26.0
           }
         }
       },
       "after": {
         "window": {
-          "n": 20710,
-          "n_pos": 11109,
-          "precision": 0.9771016985594496,
-          "recall": 0.8181654514357728,
-          "f1": 0.890598206849248,
-          "pr_auc": 0.963760797185957,
-          "roc_auc": 0.944318524258803,
-          "fpr_at_95_recall": 0.46922195604624517
+          "n": 23107,
+          "n_pos": 12295,
+          "precision": 0.9763177998472116,
+          "recall": 0.8315575437169581,
+          "f1": 0.8981420477006193,
+          "pr_auc": 0.9661395565434957,
+          "roc_auc": 0.9488780371003436,
+          "fpr_at_95_recall": 0.451165371809101
         },
-        "flagged_benign_windows": 0.02218518904280804,
+        "flagged_benign_windows": 0.02293747687754347,
         "alerts": {
           "warning": {
-            "bots_alerted": 8,
-            "bots_total": 9,
+            "bots_alerted": 11,
+            "bots_total": 13,
             "benign_alerted": 0,
-            "benign_total": 8,
-            "median_time_to_alert_min": 102.5
+            "benign_total": 10,
+            "median_time_to_alert_min": 98.0
           },
           "alert": {
-            "bots_alerted": 5,
-            "bots_total": 9,
+            "bots_alerted": 8,
+            "bots_total": 13,
             "benign_alerted": 0,
-            "benign_total": 8,
-            "median_time_to_alert_min": 29.0
+            "benign_total": 10,
+            "median_time_to_alert_min": 22.5
           }
         }
       }
@@ -353,6 +359,9 @@
       "CTU-IoT-Malware-Capture-34-1": true,
       "CTU-IoT-Malware-Capture-42-1": true,
       "CTU-IoT-Malware-Capture-44-1": false,
+      "CTU-IoT-Malware-Capture-48-1": true,
+      "CTU-IoT-Malware-Capture-49-1": true,
+      "CTU-IoT-Malware-Capture-60-1": true,
       "CTU-IoT-Malware-Capture-8-1": true
     }
   }

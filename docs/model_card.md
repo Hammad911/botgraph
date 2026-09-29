@@ -57,22 +57,30 @@ Normal hosts are counted once per scenario, so 78 = 6 hosts × 13 scenarios.
 
 ## Cross-dataset evaluation (IoT-23, no retraining)
 
-Models trained on CTU-13 were applied with unchanged weights and thresholds to 11 IoT-23
-captures (3 benign honeypots, 8 malware). Window labels come from per-flow labels: a host is a
+Models trained on CTU-13 were applied with unchanged weights and thresholds to 14 IoT-23
+captures (3 benign honeypots, 11 malware). Window labels come from per-flow labels: a host is a
 bot in a window if it originated a malicious flow, benign if it originated traffic and all its
 flows were benign. Hosts that only receive traffic (e.g. addresses a bot scanned) are unknown.
 Windows with at least 1 flow are scored (the honeypots are too quiet for CTU-13's minimum of 10).
 
 | Model | Window PR-AUC | Infected devices alerted | Benign devices alerted |
 |---|---|---|---|
-| XGBoost | 0.476 | 6/9 | 5/22 |
-| GATv2 | 0.959 | 8/9 | 4/22 |
+| XGBoost | 0.470 | 9/13 | 6/24 |
+| GATv2 | 0.962 | 11/13 | 5/24 |
 
 (12 of 15 rule.) Scanning botnets (Hide and Seek, Muhstik, Hakai, Mirai) are detected with
-PR-AUC 0.99–1.00. The false alerts are consumer IoT devices and routers whose periodic cloud
-heartbeats resemble C2 beaconing learned from CTU-13 PCs. Low-volume bots (Torii, a Trojan)
-are flagged for IoT-like behaviour, not for their malicious traffic, so those detections are
-not evidence of capability. Full report: `ml/reports/iot23/report.md`.
+PR-AUC 0.99–1.00; Gafgyt 0.74. The false alerts are consumer IoT devices and routers whose
+periodic cloud heartbeats resemble C2 beaconing learned from CTU-13 PCs. Low-volume bots (Torii,
+a Trojan) are flagged for IoT-like behaviour, not for their malicious traffic, so those
+detections are not evidence of capability. Full report: `ml/reports/iot23/report.md`.
+
+**Calibration.** Raising the alert threshold to the 95th percentile of a benign baseline's
+scores (model unchanged), evaluated by rotating over the 3 honeypots, cuts held-out benign
+windows flagged from 31–91% to 0–26% and benign devices alerted on malware networks from 2/10
+to 0/10. Hide and Seek, Muhstik, Mirai and Gafgyt stay alerted in every fold; Hakai in 2 of 3. Infected devices alerted fall from 11/13 to
+6–10/13, mostly the stealthy ones. Fine-tuning on benign IoT data instead made false alerts
+worse and reduced CTU-13 PR-AUC to 0.82–0.86. Recommended deployment: run in learning mode on a
+new network's normal traffic, set the threshold from it, then alert.
 
 ## Limitations
 
@@ -97,8 +105,8 @@ not evidence of capability. Full report: `ml/reports/iot23/report.md`.
 
 ## Next validation steps
 
-1. Per-network calibration: learn thresholds or fine-tune on a short benign period of the
-   target network, then re-run the IoT-23 test.
+1. Per-device (not just per-network) baselines, and calibration from a network's own first
+   hours rather than from other networks' honeypots.
 2. Traffic from a controlled lab with simulated C2 beacons and realistic benign load.
 3. False-alert rate per host-day on a larger benign population before any production use.
 

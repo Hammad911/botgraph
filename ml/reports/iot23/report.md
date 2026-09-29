@@ -1,26 +1,26 @@
 # Cross-dataset test: CTU-13 models on IoT-23 (no retraining)
 
-21,994 labelled host-windows from 11 captures (11,109 bot, 10,885 benign). Thresholds are each model's CTU-13 validation threshold, unchanged.
+24,391 labelled host-windows from 14 captures (12,295 bot, 12,096 benign). Thresholds are each model's CTU-13 validation threshold, unchanged.
 
 | Model | PR-AUC | Precision | Recall | FPR @ 95% recall | Latency p95 (ms/window) |
 |---|---|---|---|---|---|
-| XGBoost | 0.476 | 0.438 | 0.357 | 0.993 | n/a |
-| GraphSAGE | 0.974 | 0.722 | 0.997 | 0.334 | 0.9 |
-| E-GraphSAGE | 0.944 | 0.632 | 0.966 | 0.517 | 1.0 |
-| GATv2 | 0.959 | 0.634 | 0.962 | 0.486 | 1.7 |
+| XGBoost | 0.470 | 0.446 | 0.386 | 0.993 | n/a |
+| GraphSAGE | 0.974 | 0.719 | 0.994 | 0.325 | 4.5 |
+| E-GraphSAGE | 0.931 | 0.642 | 0.967 | 0.496 | 7.7 |
+| GATv2 | 0.962 | 0.644 | 0.964 | 0.468 | 14.7 |
 
 ## Alerts per device
 
 | Model | Level | Rule | Infected devices alerted | Benign devices alerted | Median time to alert |
 |---|---|---|---|---|---|
-| XGBoost | warning | 3 of 5 | 9/9 | 16/22 | 3 min |
-| XGBoost | alert | 12 of 15 | 6/9 | 5/22 | 13 min |
-| GraphSAGE | warning | 3 of 5 | 9/9 | 15/22 | 2 min |
-| GraphSAGE | alert | 12 of 15 | 8/9 | 5/22 | 11 min |
-| E-GraphSAGE | warning | 3 of 5 | 9/9 | 15/22 | 4 min |
-| E-GraphSAGE | alert | 12 of 15 | 9/9 | 5/22 | 21 min |
-| GATv2 | warning | 3 of 5 | 9/9 | 13/22 | 4 min |
-| GATv2 | alert | 12 of 15 | 8/9 | 4/22 | 53 min |
+| XGBoost | warning | 3 of 5 | 13/13 | 17/24 | 3 min |
+| XGBoost | alert | 12 of 15 | 9/13 | 6/24 | 13 min |
+| GraphSAGE | warning | 3 of 5 | 12/13 | 16/24 | 2 min |
+| GraphSAGE | alert | 12 of 15 | 11/13 | 6/24 | 11 min |
+| E-GraphSAGE | warning | 3 of 5 | 12/13 | 16/24 | 4 min |
+| E-GraphSAGE | alert | 12 of 15 | 12/13 | 6/24 | 19 min |
+| GATv2 | warning | 3 of 5 | 12/13 | 14/24 | 4 min |
+| GATv2 | alert | 12 of 15 | 11/13 | 5/24 | 26 min |
 
 ## Per capture (window-level PR-AUC)
 
@@ -36,4 +36,7 @@
 | CTU-IoT-Malware-Capture-34-1 | 806 | 633 | 0.877 | 0.994 | 0.995 | 0.994 |
 | CTU-IoT-Malware-Capture-42-1 | 6 | 503 | 0.059 | 0.008 | 0.008 | 0.021 |
 | CTU-IoT-Malware-Capture-44-1 | 13 | 117 | 0.808 | 0.274 | 0.436 | 0.440 |
+| CTU-IoT-Malware-Capture-48-1 | 591 | 53 | 0.911 | 1.000 | 1.000 | 1.000 |
+| CTU-IoT-Malware-Capture-49-1 | 450 | 10 | 0.971 | 1.000 | 1.000 | 1.000 |
+| CTU-IoT-Malware-Capture-60-1 | 145 | 1148 | 0.296 | 0.492 | 0.621 | 0.735 |
 | CTU-IoT-Malware-Capture-8-1 | 1376 | 79 | 0.924 | 1.000 | 1.000 | 1.000 |
