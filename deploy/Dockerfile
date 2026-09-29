@@ -7,7 +7,7 @@
 # Hardened for Kubernetes: uv only exists in the build stage, the runtime runs as a fixed
 # non-root UID and works with a read-only root filesystem (writable paths: /app/data, /tmp).
 
-FROM python:3.11-slim AS build
+FROM python:3.14-slim AS build
 COPY --from=ghcr.io/astral-sh/uv:0.4.20 /uv /usr/local/bin/uv
 ENV UV_LINK_MODE=copy UV_COMPILE_BYTECODE=1 UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
@@ -20,7 +20,7 @@ COPY services services
 COPY api api
 RUN uv sync --frozen --no-dev
 
-FROM python:3.11-slim
+FROM python:3.14-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH=/app/.venv/bin:$PATH \
