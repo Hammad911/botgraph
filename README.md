@@ -160,6 +160,15 @@ The replay streams a recorded capture with **labels stripped**; the pipeline nev
 truth. A live terminal view shows windows scored, warnings, alerts and recent events, and the
 run ends with a summary scored against the hidden labels.
 
+Demo on CTU-13 scenario 6 (Menti, a family the model never trained on), on a MacBook Air:
+
+| Infected host | Normal hosts | Time to alert | Throughput | Window latency |
+|---|---|---|---|---|
+| alerted (1/1) | 0/6 alerted | 14 min | 22k flows/s, **306× real time** | p50 35 ms, p95 39 ms |
+
+This matches the offline evaluation for Menti exactly. 51 other university hosts that CTU-13
+leaves unlabelled were also alerted; with no ground truth for them, they cannot be scored.
+
 - **Streaming windows** use event time with a watermark and allowed lateness; on in-order input
   they are identical to the batch windows used in training (randomised property tests).
 - **Alerts** at two levels: *warning* (flagged in 3 of the last 5 windows) and *alert* (12 of
