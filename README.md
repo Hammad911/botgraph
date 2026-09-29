@@ -5,9 +5,10 @@ host-to-host communication graph every minute and uses a GNN trained in-house to
 hosts. It targets the coordinated behaviour that per-flow detectors miss: C2 beaconing,
 fan-out scanning and peer-to-peer bot meshes.
 
-> Status: **Phases 0–5 done.** Three GNNs trained and evaluated on all 13 CTU-13 scenarios
+> Status: **Phases 0–6 done.** Three GNNs trained and evaluated on all 13 CTU-13 scenarios
 > (leave-one-family-out CV) and on IoT-23 without retraining, a live detection pipeline
-> (`botgraph run`), and an analyst console. See the [model card](docs/model_card.md).
+> (`botgraph run`), an analyst console, and production operations: metrics and alerting,
+> drift monitoring, security hardening and a Helm chart. See the [model card](docs/model_card.md).
 
 ![Alert explanation in the BotGraph console](docs/img/alert-explanation.png)
 
@@ -116,8 +117,9 @@ features the model sees in production match what it was trained on.
 | `packages/botgraph-core` | Flow schema, dataset adapters, windowing, graph features |
 | `ml/` | Data prep, labels, models, training and evaluation |
 | `services/` | Live pipeline: ingest, streaming windows, detector, alerts, replay (`botgraph` CLI) |
-| `web/` | Next.js analyst console *(planned)* |
-| `deploy/` | Dockerfile; compose with Redpanda, Postgres, ClickHouse, Redis, MLflow + pipeline services |
+| `api/` | FastAPI backend for the console (REST + WebSocket), auth, audit log |
+| `web/` | Next.js analyst console |
+| `deploy/` | Images, compose (infra, pipeline, Prometheus + Grafana), Helm chart (`deploy/helm/botgraph`) |
 
 ## Quick start
 
@@ -228,6 +230,110 @@ cd web && npm install && npm run dev                          # 3. console on :3
 - **Tests:** API tests (auth, roles, triage, WebSocket push and races) and Playwright
   end-to-end tests against a seeded store and a production build (`cd web && npm run e2e`).
 
+## Operations
+
+### Metrics, health and logs
+
+Every long-running service (`ingest`, `detect`, `botgraph-api serve`) takes `--metrics-port`
+(or `BOTGRAPH_METRICS_PORT`) and serves `/metrics`, `/healthz` (the service loop is alive) and
+`/readyz` (model loaded, broker and store reached) there, never on the public API port.
+
+| Metric | What it tells you |
+|---|---|
+| `botgraph_windows_scored_total`, `botgraph_last_window_processed_timestamp_seconds` | a sensor went quiet or the detector stalled |
+| `botgraph_window_latency_seconds`, `botgraph_explain_latency_seconds`, `botgraph_store_write_seconds` | where scoring time goes |
+| `botgraph_consumer_lag_messages`, `botgraph_late_flows_total` | falling behind real time, sensor clock problems |
+| `botgraph_host_score`, `botgraph_flagged_hosts`, `botgraph_sensor_threshold` | score distribution and calibration per sensor |
+| `botgraph_feature_psi`, `botgraph_score_psi` | drift (below) |
+| `botgraph_api_requests_total` (by route template), `botgraph_api_logins_total`, `botgraph_api_login_lockouts_total` | API errors, latency, password guessing |
+
+Logs are one JSON object per line (`BOTGRAPH_LOG_FORMAT=json`, the default off a terminal);
+API requests carry an `X-Request-ID`. Alert rules ([`prometheus-alerts.yml`](deploy/helm/botgraph/files/prometheus-alerts.yml),
+11 rules, checked with `promtool` in CI) cover stalled detectors, lag, latency, ingest rejects,
+late flows, alert storms, drift, API errors and failed-login bursts. A Grafana dashboard is
+provisioned automatically:
+
+```bash
+docker compose -f deploy/compose/docker-compose.yml --profile pipeline --profile observability up -d
+# Grafana http://localhost:3001 (admin / GRAFANA_ADMIN_PASSWORD)   Prometheus http://localhost:9090
+```
+
+### Drift monitoring
+
+The detector compares the last hour of each sensor's traffic, using hosts that sent at least
+one flow, with two references. It computes the population stability index (PSI) of 14 host
+features and of the model's scores:
+
+- **since calibration**: the sensor's own first hour, the traffic its threshold was learned on
+  (kept in the store; `recalibrate` relearns it). *Has this network changed?*
+- **vs training data**: the model bundle's `drift_reference.json`
+  (`python -m botgraph_ml.drift --model gatv2`). *Does this network look like what the model
+  learned on?*
+
+Measured on replays (`botgraph run`):
+
+| Capture | PSI since calibration (median) | PSI vs training (median) |
+|---|---|---|
+| CTU-13 scenario 6 (the model's home network) | 0.008 | 0.13 |
+| IoT-23 Mirai (capture 34-1) | 0.36 (the bot's behaviour changes) | 4.3 |
+| IoT-23 benign honeypot (one device) | not reported: too few hosts | not reported |
+
+The IoT shift the offline evaluation found is now visible live, before false alerts pile up.
+Two pitfalls came up during testing. Both are fixed and covered by tests:
+
+- **Scan targets counted as hosts.** Internal addresses that only *receive* traffic are usually
+  unused addresses hit by a scan. They were 35–80% of internal hosts per window on CTU-13
+  scenario 6, and a scan burst inside the baseline made PSI jump to 0.42 on an unchanged
+  network. Only hosts that send traffic are compared now (0.02).
+- **Tiny samples.** One IoT device over 60 overlapping windows is about 12 independent
+  samples, and decile PSI read 3.1 on a honeypot that did not change. Each side now needs
+  1,000 host-windows (collected over up to 24 h); until then nothing is reported.
+
+The console's **Sensors** page shows both levels (stable < 0.1 ≤ moderate < 0.25 ≤
+significant) and the feature that moved most.
+
+### Security
+
+- **Accounts:** scrypt hashes, 12+ character passwords. After 5 wrong passwords an account is
+  locked for 15 minutes. Unknown, locked and disabled accounts all return the same error and
+  take the same time, so account names cannot be enumerated. Logins are also rate-limited per
+  client (10/min).
+- **Tokens:** HS256 JWTs with issuer, expiry (8 h) and a per-user version checked on every
+  request and on open WebSockets. A password change, a disabled account, a role change or
+  **Sign out** (which signs out every session) takes effect immediately:
+  `botgraph-api set-password | disable-user | revoke-tokens`.
+- **Production mode** (`BOTGRAPH_ENV=production`, set by compose and Helm) refuses to start
+  without a 32+ byte `BOTGRAPH_JWT_SECRET`, hides the OpenAPI docs and sends HSTS.
+- **HTTP:** strict security headers and a 64 KiB body limit on the API. The console has a CSP
+  (`connect-src 'self'` behind the ingress). CORS and WebSocket `Origin` must match an
+  explicit allow-list; `*` is refused. Path parameters are validated.
+- **Audit log:** sign-ins (including why a failed one failed), triage and recalibration, with
+  actor and client address. Admins see it in the console (**Audit log**).
+- **Transport:** Kafka SASL/TLS through `BOTGRAPH_KAFKA_SECURITY_PROTOCOL`,
+  `…_SASL_MECHANISM`, `…_SASL_USERNAME`, `…_SASL_PASSWORD` and `…_SSL_CA_LOCATION`.
+- **Supply chain (CI):** ruff's bandit rules, `pip-audit` on `uv.lock`, `npm audit`, Trivy
+  scans of both images, Dependabot. Images run as UID 10001 on a read-only root filesystem.
+
+### Kubernetes (Helm)
+
+```bash
+helm install botgraph deploy/helm/botgraph \
+  --set ingress.host=botgraph.example.com \
+  --set kafka.bootstrap=redpanda.kafka.svc:9092 \
+  --set existingSecret=botgraph-secrets \
+  --set models.existingClaim=botgraph-models \
+  --set monitoring.serviceMonitor.enabled=true,monitoring.prometheusRule.enabled=true
+```
+
+The chart deploys ingest, detector, API (2 replicas, PDB, optional HPA) and console behind
+one ingress (`/api` → API, WebSocket included; `/` → console). A pre-install/upgrade Job
+runs the database migrations. Pods run non-root with a read-only root filesystem, all
+capabilities dropped and no service-account token, and default-deny NetworkPolicies admit
+only the ingress controller and Prometheus. Optional ServiceMonitor, PrometheusRule and Grafana
+dashboard ConfigMap are provided for the Prometheus operator. Kafka and Postgres are external;
+the secret holds `BOTGRAPH_DB_URL` and `BOTGRAPH_JWT_SECRET`. CI lints the chart and validates
+the rendered manifests with kubeconform.
+
 ## Data and model pipeline
 
 Each step is a module CLI and a [DVC](https://dvc.org) stage (`dvc.yaml`, parameters in
@@ -303,7 +409,7 @@ host-level alert outcomes (bots and normal hosts alerted, time to alert) per bot
 - [x] Phase 4: live pipeline: streaming windows, detector, two-level alerts, learning mode,
       explanations, replay, Kafka/Postgres services, Docker, metrics
 - [x] Phase 5: FastAPI + Next.js analyst console (live map, triage, explanations, e2e tests)
-- [ ] Phase 6: observability, drift monitoring, security hardening, Helm
+- [x] Phase 6: observability, drift monitoring, security hardening, Helm
 - [ ] Phase 7: demo, write-up ([model card](docs/model_card.md) done)
 
 ## Known issues
