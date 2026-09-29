@@ -416,6 +416,21 @@ class Store:
             ).all()
         return [(str(a), str(b), float(c)) for a, b, c in rows]
 
+    def count_alerts(self, level: str | None = None, statuses: tuple[str, ...] = ()) -> int:
+        query = select(func.count()).select_from(Alert)
+        if level:
+            query = query.where(Alert.level == level)
+        if statuses:
+            query = query.where(Alert.status.in_(statuses))
+        with Session(self.engine) as s:
+            return int(s.scalar(query) or 0)
+
+    def hosts_monitored(self, since: float) -> int:
+        """Distinct internal hosts scored in windows starting at or after ``since``."""
+        with Session(self.engine) as s:
+            query = select(func.count(func.distinct(HostScore.sensor_id + "|" + HostScore.ip)))
+            return int(s.scalar(query.where(HostScore.window_start >= since)) or 0)
+
     def summary(self) -> dict[str, Any]:
         with Session(self.engine) as s:
             return {
