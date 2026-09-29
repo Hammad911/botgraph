@@ -47,3 +47,29 @@ test("host timeline and live map render", async ({ page }) => {
   await expect(page.getByText("showing 10 of 10 hosts")).toBeVisible();
   await expect(page.locator("canvas").first()).toBeVisible();
 });
+
+test("sensors show drift and admins see the audit log", async ({ page }) => {
+  await signIn(page);
+  await page.getByRole("link", { name: "Sensors", exact: true }).click();
+  // The seeded beaconing pushed the network past the significant PSI level since calibration.
+  const since = page.getByLabel(/^Drift since calibration: PSI 0\.32/);
+  await expect(since.getByText("Significant")).toBeVisible();
+  await expect(since.getByText("Regular, beacon-like timing")).toBeVisible();
+  await expect(page.getByLabel(/^Drift vs training data/).getByText("Stable")).toBeVisible();
+
+  await page.getByRole("link", { name: "Audit log" }).click();
+  await expect(page.getByRole("heading", { name: "Audit log" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Signed in" }).first()).toBeVisible();
+});
+
+test("signing out revokes the token on the server", async ({ page }) => {
+  await signIn(page);
+  const token = await page.evaluate(
+    () => JSON.parse(sessionStorage.getItem("botgraph.session") ?? "{}").token as string,
+  );
+  const me = () => page.request.get("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+  expect((await me()).status()).toBe(200);
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+  await expect.poll(async () => (await me()).status()).toBe(401);
+});

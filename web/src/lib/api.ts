@@ -126,6 +126,35 @@ export const GraphSnapshot = z.object({
 });
 export type GraphSnapshot = z.infer<typeof GraphSnapshot>;
 
+const DriftVersus = z.object({
+  features: z.record(z.string(), z.number()),
+  max_feature: z.string(),
+  max_psi: z.number(),
+  score_psi: z.number(),
+});
+export type DriftVersus = z.infer<typeof DriftVersus>;
+
+export const Drift = z.object({
+  sensor_id: z.string(),
+  window_start: z.number(),
+  windows: z.number(),
+  hosts: z.number(),
+  baseline: DriftVersus.nullable(),
+  training: DriftVersus.nullable(),
+});
+export type Drift = z.infer<typeof Drift>;
+
+export const AuditEvent = z.object({
+  id: z.number(),
+  at: z.string(),
+  actor: z.string().nullable(),
+  action: z.string(),
+  target: z.string().nullable(),
+  client: z.string().nullable(),
+  detail: z.record(z.string(), z.unknown()).nullable(),
+});
+export type AuditEvent = z.infer<typeof AuditEvent>;
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -175,6 +204,10 @@ export const endpoints = {
     apiFetch(`/api/hosts/${encodeURIComponent(sensor)}/${encodeURIComponent(ip)}`, Host, t),
   graph: (t: string, sensor: string) =>
     apiFetch(`/api/graph/${encodeURIComponent(sensor)}`, GraphSnapshot, t),
+  logout: (t: string) =>
+    apiFetch("/api/auth/logout", z.object({ status: z.string() }), t, { method: "POST" }),
+  drift: (t: string) => apiFetch("/api/drift", z.array(Drift), t),
+  audit: (t: string) => apiFetch("/api/audit", z.array(AuditEvent), t),
   recalibrate: (t: string, sensor: string) =>
     apiFetch(`/api/sensors/${encodeURIComponent(sensor)}/recalibrate`, z.object({ status: z.string() }), t, {
       method: "POST",

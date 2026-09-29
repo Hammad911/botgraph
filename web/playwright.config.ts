@@ -20,6 +20,8 @@ export default defineConfig({
         `uv run botgraph-api --db ${DB} seed-demo --fresh --username ${E2E_USER.username} ` +
         `--password ${E2E_USER.password} && uv run botgraph-api --db ${DB} serve --port ${API_PORT}`,
       cwd: "..",
+      // The WebSocket is refused from origins the API does not list.
+      env: { BOTGRAPH_CORS_ORIGINS: `http://localhost:${WEB_PORT}`, BOTGRAPH_LOG_LEVEL: "WARNING" },
       url: `http://127.0.0.1:${API_PORT}/api/health`,
       timeout: 180_000,
       reuseExistingServer: false,
