@@ -413,7 +413,7 @@ host-level alert outcomes (bots and normal hosts alerted, time to alert) per bot
       explanations, replay, Kafka/Postgres services, Docker, metrics
 - [x] Phase 5: FastAPI + Next.js analyst console (live map, triage, explanations, e2e tests)
 - [x] Phase 6: observability, drift monitoring, security hardening, Helm
-- [ ] Phase 7: demo, write-up ([model card](docs/model_card.md) done)
+- [~] Phase 7: demo GIF and [model card](docs/model_card.md) done; public write-up pending
 
 ## Known issues
 
