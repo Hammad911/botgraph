@@ -10,7 +10,10 @@ fan-out scanning and peer-to-peer bot meshes.
 > (`botgraph run`), an analyst console, and production operations: metrics and alerting,
 > drift monitoring, security hardening and a Helm chart. See the [model card](docs/model_card.md).
 
-![Alert explanation in the BotGraph console](docs/img/alert-explanation.png)
+![BotGraph replaying CTU-13 scenario 12: the overview fills live, an alert fires, its explanation, the host timeline and the live map](docs/img/demo.gif)
+
+*A replay of CTU-13 scenario 12 at 120× speed: alerts appear as the bots act, each with an
+explanation of which flows and features drove it.*
 
 ## Results
 

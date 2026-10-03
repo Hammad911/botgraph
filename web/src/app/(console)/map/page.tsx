@@ -91,8 +91,8 @@ export default function MapPage() {
       </div>
 
       {graph.error && !noMap && <ErrorNote error={graph.error} />}
-      <div className="grid gap-4 xl:grid-cols-4">
-        <Card className="xl:col-span-3">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <Card className="min-w-0">
           <Legend />
           <div className="relative mt-3 h-[560px] rounded-md bg-page">
             {snap ? (
